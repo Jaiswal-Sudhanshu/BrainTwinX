@@ -54,7 +54,7 @@ tests, integration, and manual verification where applicable:
 - [x] `docs/IMPLEMENTATION_PLAN.md`
 - [x] `docs/TASKS.md`
 - [x] `docs/ASSUMPTIONS.md`
-- [ ] `.gitignore` covering build output, `node_modules`, virtualenvs, `.env`, model weights, uploaded scans, generated reports — **DONE, and verified functionally**: `git check-ignore` confirms `.env`, `storage/patient.png`, and `*.pt` weights are all excluded
+- [x] `.gitignore` covering build output, `node_modules`, virtualenvs, `.env`, model weights, uploaded scans, generated reports — **DONE, and verified functionally**: `git check-ignore` confirms `.env`, `storage/patient.png`, and `*.pt` weights are all excluded
 - [x] `.env.example` with placeholders only — **no real secrets**
 - [x] `README.md` initial skeleton
 - [x] Verify no secrets tracked (`git ls-files` review + secret-pattern scan over staged diff)
@@ -108,7 +108,7 @@ environment issue**, not on code.
 - [ ] `docs/system-design/01-SYSTEM-OVERVIEW.md`
 - [ ] `docs/system-design/02-HIGH-LEVEL-DESIGN.md`
 - [ ] `docs/system-design/05-DATABASE-DESIGN.md`
-- [ ] `docs/system-design/14-ER-DIAGRAM.md`
+- [x] `docs/system-design/14-ER-DIAGRAM.md` — Mermaid ER diagram, cardinality, ON DELETE and index rationale (designed, not verified)
 - [ ] Maven Wrapper (`mvnw`) committed — currently depends on host Maven in `~/Downloads`
       (risk R-6)
 
