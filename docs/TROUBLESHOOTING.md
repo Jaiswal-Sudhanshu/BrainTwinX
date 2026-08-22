@@ -78,20 +78,40 @@ Caused by: DockerClientException: Could not pull image: failed to copy: httpRead
     failed open: failed to do request: Get "https://production.cloudfront.docker.com/..." : EOF
 ```
 
-**Root cause.** A transient network failure pulling from Docker Hub's CDN — an `EOF`
-mid-blob-download. Not a configuration or code fault. Testcontainers pulls two images on a
-cold cache: `testcontainers/ryuk` (its container reaper) and the database image.
+**Root cause.** A **local network condition that drops large sustained downloads** — not a
+registry or Docker fault. Evidence:
 
-**Fix.** Pre-pull the images so the test run does not depend on a download succeeding
-mid-test:
+| Observation | Implication |
+|---|---|
+| `testcontainers/ryuk:0.12.0` (29 MB) pulls successfully | Docker, TLS, DNS, and registry auth all work |
+| `mysql:8.4` (~250 MB) fails from Docker Hub — 12 attempts | Not a transient blip |
+| `public.ecr.aws/docker/library/mysql:8.4` fails **identically** | Two independent registries, two different CloudFront distributions (`production.cloudfront.docker.com` and `d2glxqk2uabbnd.cloudfront.net`) |
+| Failure is always `EOF` mid-blob, never a 4xx/5xx | The connection is being severed during transfer, not refused |
 
-```bash
-docker pull testcontainers/ryuk:0.12.0
-docker pull mysql:8.4
-```
+Small transfers succeed and large ones are cut off, across unrelated hosts. That pattern points
+at the local path — commonly an MTU/fragmentation problem, a TLS-inspecting middlebox or
+corporate proxy, or ISP-level behaviour on long-lived connections — rather than anything
+fixable in this repository.
 
-Once cached locally, subsequent runs do not hit the network. If a pull itself keeps failing,
-retry it — the failure is in the CDN transfer, not in Docker or the build.
+**Fixes, in order of preference.**
+
+1. **Pull on a different network.** A mobile hotspot or VPN is the fastest way to confirm the
+   diagnosis and get the image cached. Once cached, it never needs downloading again.
+2. **Lower Docker Desktop's MTU.** If the cause is fragmentation, Docker Desktop → Settings →
+   Docker Engine, add `"mtu": 1400`, then Apply & Restart.
+3. **Pull a smaller MySQL variant.** Any tag **≥ 8.0.16** satisfies the CHECK-constraint
+   requirement (see T-5). If a smaller image pulls where 8.4 will not, update the tag in
+   `AbstractIntegrationTest` and record the change here — do **not** drop below 8.0.16.
+4. **Run integration tests against a local MySQL instead of Testcontainers.** A MySQL 8.0.46
+   installer is already present in `~/Downloads`. This needs a small change to
+   `AbstractIntegrationTest` to use an externally supplied datasource when one is configured,
+   and it trades away the clean-database-per-run guarantee — so it is a fallback, not the
+   preferred design.
+
+**What is NOT the problem:** application code, the migration, the entity model, or the
+Testcontainers configuration. `mvn verify` will run unchanged the moment the image is present
+locally.
+
 
 
 ---

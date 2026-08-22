@@ -348,7 +348,7 @@ database, so it is **not** verified. Nothing in this phase may be marked `VERIFI
 | B-3 | Trained forecasting weights | No longitudinal series | Owner supplies serial-scan data |
 | B-4 | Reported model accuracy metrics | No evaluation run possible | B-1/B-2/B-3 resolved |
 | B-5 | Live LLM explanations | No provider/API key configured | Owner supplies provider config |
-| B-6 | **Schema verification (`mvn verify`)** | **Cannot pull the `mysql:8.4` Docker image.** 11 pull attempts failed with `httpReadSeeker: failed open: ... EOF` from Docker Hub's CDN. Docker itself works (`hello-world` runs; `testcontainers/ryuk:0.12.0` pulled successfully and its container was created), and the Testcontainers↔Docker connection defect was found and fixed. The only remaining obstacle is downloading the ~250 MB database image. | A successful `docker pull mysql:8.4` on a stable connection. Then `mvn verify` runs unchanged — no code change required. |
+| B-6 | **Schema verification (`mvn verify`)** | **Cannot pull the `mysql:8.4` Docker image.** 12 pull attempts failed, and the AWS ECR public mirror fails identically on a different CDN host with `httpReadSeeker: failed open: ... EOF` from Docker Hub's CDN. Docker itself works (`hello-world` runs; `testcontainers/ryuk:0.12.0` pulled successfully and its container was created), and the Testcontainers↔Docker connection defect was found and fixed. The only remaining obstacle is downloading the ~250 MB database image. | A successful `docker pull mysql:8.4` on a stable connection. Then `mvn verify` runs unchanged — no code change required. |
 
 These are **documented gaps, not silent omissions.** The corresponding interfaces,
 pipelines, and harnesses are still built and tested so that resolving each blocker is a
