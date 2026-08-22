@@ -54,12 +54,16 @@ pull images and start a container.
 | Pinning `api.version=1.44` in `~/.testcontainers.properties` | No effect. Ruled out simple version negotiation as the whole story. |
 | Upgrading to Testcontainers **2.0.5** | Build could not read the POM: 2.x reorganised artifact coordinates, so `org.testcontainers:mysql` and `org.testcontainers:junit-jupiter` are no longer managed by its BOM. Migrating to 2.x is not a version bump and was deferred. |
 
-Neither properties-file setting is required once on 1.21.4. If you created
-`~/.testcontainers.properties` while debugging this, it can be removed.
+Neither properties-file setting is *known* to be redundant on 1.21.4. When the connection
+first succeeded, **both** the 1.21.4 upgrade and the properties file were in place, and the
+two were not isolated from each other afterwards. The upgrade is the change with the
+established causal link (1.21.3 aborted in 0.8 s; 1.21.4 proceeded to pull images), so it is
+the committed fix — but if you remove `~/.testcontainers.properties` and the connection
+breaks, restore it and please record that here.
 
 **Note on `DOCKER_HOST`.** Exporting `DOCKER_HOST` in the shell does propagate to child
-processes and is read by Testcontainers, but it does not persist across sessions and is not
-needed on 1.21.4.
+processes and is read by Testcontainers, but it does not persist across sessions, so the
+properties file is the durable equivalent.
 
 ---
 
