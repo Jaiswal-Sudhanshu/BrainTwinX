@@ -1,0 +1,138 @@
+# ---------------------------------------------------------------------------
+# BrainTwinX — root .gitignore
+# ---------------------------------------------------------------------------
+# Rule of thumb: build output, dependencies, secrets, patient data, model
+# weights, and generated artefacts are never tracked.
+# ---------------------------------------------------------------------------
+
+# --- Secrets & environment -------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+secrets/
+credentials.json
+service-account*.json
+
+# --- Java / Maven ----------------------------------------------------------
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.war
+*.ear
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties.bak
+hs_err_pid*
+replay_pid*
+
+# --- Node / frontend -------------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+coverage/
+playwright-report/
+test-results/
+
+# --- Python / AI service ---------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.eggs/
+.ipynb_checkpoints/
+
+# --- Model weights & checkpoints -------------------------------------------
+# Weights are large binaries and are supplied out-of-band. See
+# docs/DATASET_SETUP.md. Never commit them.
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.h5
+*.pb
+*.safetensors
+*.tflite
+ai-service/models/weights/
+ai-service/artifacts/
+ai-service/runs/
+mlruns/
+
+# --- Datasets --------------------------------------------------------------
+# Datasets are licensed material and are never committed. Only the README
+# describing how to obtain them is tracked.
+ai-service/datasets/**
+!ai-service/datasets/README.md
+!ai-service/datasets/.gitkeep
+
+# --- Patient data & generated artefacts ------------------------------------
+# PHI must never enter version control under any circumstances.
+storage/
+uploads/
+scans/
+masks/
+reports/
+*.dcm
+*.nii
+*.nii.gz
+
+# --- Databases -------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+mysql-data/
+db-data/
+
+# --- Logs ------------------------------------------------------------------
+logs/
+*.log
+
+# --- IDE / editor ----------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.factorypath
+
+# --- OS --------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
