@@ -17,8 +17,8 @@ tests, integration, and manual verification where applicable:
 
 | Phase | Name | Status |
 |---|---|---|
-| P1 | Repository audit & scaffold | `[-]` IN_PROGRESS |
-| P2 | Architecture & database | `[ ]` NOT_STARTED |
+| P1 | Repository audit & scaffold | `[x]` **COMPLETE** |
+| P2 | Architecture & database | `[-]` IN_PROGRESS — code complete, schema verification blocked |
 | P3 | Authentication & authorisation | `[ ]` NOT_STARTED |
 | P4 | Patient management | `[ ]` NOT_STARTED |
 | P5 | MRI upload & validation | `[ ]` NOT_STARTED |
@@ -38,6 +38,8 @@ tests, integration, and manual verification where applicable:
 
 ## P1 — Repository audit & scaffold
 
+**Status: COMPLETE.** Committed as `884014d`.
+
 - [x] Inspect target directory — verified **empty** (0 items, recursive, incl. hidden)
 - [x] Confirm no Git repository present
 - [x] Search host filesystem for existing BrainTwinX source or archives — none found
@@ -52,35 +54,67 @@ tests, integration, and manual verification where applicable:
 - [x] `docs/IMPLEMENTATION_PLAN.md`
 - [x] `docs/TASKS.md`
 - [x] `docs/ASSUMPTIONS.md`
-- [ ] `.gitignore` covering build output, `node_modules`, virtualenvs, `.env`, model weights, uploaded scans, generated reports
-- [ ] `.env.example` with placeholders only — **no real secrets**
-- [ ] `README.md` initial skeleton
-- [ ] Verify no secrets tracked (`git ls-files` review)
-- [ ] Initial commit
+- [ ] `.gitignore` covering build output, `node_modules`, virtualenvs, `.env`, model weights, uploaded scans, generated reports — **DONE, and verified functionally**: `git check-ignore` confirms `.env`, `storage/patient.png`, and `*.pt` weights are all excluded
+- [x] `.env.example` with placeholders only — **no real secrets**
+- [x] `README.md` initial skeleton
+- [x] Verify no secrets tracked (`git ls-files` review + secret-pattern scan over staged diff)
+- [x] Initial commit (`884014d`)
 
-**Exit criteria met:** not yet.
+**Exit criteria met: YES.**
 
 ---
 
 ## P2 — Architecture & database
 
-- [ ] ADR-001 React frontend
-- [ ] ADR-002 Spring Boot backend
-- [ ] ADR-003 Python AI service
-- [ ] ADR-004 MySQL
-- [ ] ADR-005 REST for backend↔AI communication
+**Status: IN_PROGRESS.** Implementation complete; schema verification **blocked on an
+environment issue**, not on code.
+
+### Completed and verified
+
+- [x] Spring Boot project (`pom.xml`) — Spring Boot 4.1.1, Java 21 target, no Lombok
+- [x] **Verified** Spring Boot ↔ Java 25 compatibility by running an actual build:
+      `mvn test-compile` compiled 38 main + 3 test sources with `release 21` and **zero
+      warnings** on project sources
+- [x] Flyway `V1__baseline_schema.sql` — 11 tables with PK/FK/UNIQUE/INDEX/NOT NULL/CHECK
+- [x] JPA entities (12) + base classes + 12 domain enums
+- [x] Repositories (11)
+- [x] Scan status state machine defined in one authoritative place (`ScanStatus`)
+- [x] Job status state machine (`JobStatus`)
+- [x] Model-version and preprocessing-version columns present from the outset
+- [x] `application.yml` + `application-dev.yml` + `application-prod.yml`
+- [x] **32 unit tests passing** — `mvn test` BUILD SUCCESS, 0 failures, 0 errors
+      (state machines, illegal-transition rejection, mandatory failure codes, retry
+      clearing stale errors)
+- [x] ADR-001 React frontend
+- [x] ADR-002 Spring Boot backend
+- [x] ADR-003 Python AI service
+- [x] ADR-004 MySQL
+- [x] ADR-005 REST for backend↔AI communication
+- [x] `docs/TROUBLESHOOTING.md` — 7 entries, each with diagnosed root cause
+
+### Blocked
+
+- [!] **`mvn verify` (integration tests) — BLOCKED.** See B-6 below. `mvn test` passes;
+      only the Testcontainers-backed suite cannot run.
+- [!] Testcontainers MySQL integration test — migration applies from empty schema
+- [!] Hibernate `ddl-auto=validate` agreement between entities and migration **asserted at
+      runtime** (the code is written; the assertion has not executed)
+- [!] The 9 schema-level safety-invariant tests in `SchemaMigrationIT` (forecast-with-
+      insufficient-history rejection, confidence range, failed-scan-must-have-reason,
+      duplicate-upload rejection, no dice/iou columns, …)
+
+### Not yet started
+
 - [ ] `docs/system-design/01-SYSTEM-OVERVIEW.md`
 - [ ] `docs/system-design/02-HIGH-LEVEL-DESIGN.md`
 - [ ] `docs/system-design/05-DATABASE-DESIGN.md`
 - [ ] `docs/system-design/14-ER-DIAGRAM.md`
-- [ ] Spring Boot project (`pom.xml`, Maven Wrapper committed)
-- [ ] **Verify** Spring Boot ↔ Java 25 compatibility by running an actual build
-- [ ] Flyway `V1__baseline.sql` — 9 tables with PK/FK/unique/index/NOT NULL/CHECK
-- [ ] JPA entities + repositories
-- [ ] Scan status state machine defined in a single authoritative place
-- [ ] Model-version and preprocessing-version columns present from the outset
-- [ ] Testcontainers MySQL integration test — migration applies from empty schema
-- [ ] `mvn verify` green
+- [ ] Maven Wrapper (`mvnw`) committed — currently depends on host Maven in `~/Downloads`
+      (risk R-6)
+
+**Exit criteria met: NO.** The schema is written but has never been applied to a real
+database, so it is **not** verified. Nothing in this phase may be marked `VERIFIED`.
+
 
 ---
 
@@ -314,7 +348,29 @@ tests, integration, and manual verification where applicable:
 | B-3 | Trained forecasting weights | No longitudinal series | Owner supplies serial-scan data |
 | B-4 | Reported model accuracy metrics | No evaluation run possible | B-1/B-2/B-3 resolved |
 | B-5 | Live LLM explanations | No provider/API key configured | Owner supplies provider config |
+| B-6 | **Schema verification (`mvn verify`)** | **Cannot pull the `mysql:8.4` Docker image.** 11 pull attempts failed with `httpReadSeeker: failed open: ... EOF` from Docker Hub's CDN. Docker itself works (`hello-world` runs; `testcontainers/ryuk:0.12.0` pulled successfully and its container was created), and the Testcontainers↔Docker connection defect was found and fixed. The only remaining obstacle is downloading the ~250 MB database image. | A successful `docker pull mysql:8.4` on a stable connection. Then `mvn verify` runs unchanged — no code change required. |
 
 These are **documented gaps, not silent omissions.** The corresponding interfaces,
 pipelines, and harnesses are still built and tested so that resolving each blocker is a
 configuration/data step rather than a development step.
+
+---
+
+## Verification log
+
+A record of what has actually been executed, so no status above rests on assumption.
+
+| Date | Check | Result |
+|---|---|---|
+| 2026-08-22 | Repository audit (9 independent checks) | Repo empty — greenfield confirmed |
+| 2026-08-22 | `pip index versions torch` | 2.13.0 available for cp314 — local ML dev viable |
+| 2026-08-22 | `git check-ignore` on `.env`, PHI file, `.pt` weights | All correctly ignored |
+| 2026-08-22 | Secret-pattern scan over staged diff | No non-placeholder secrets |
+| 2026-08-22 | `mvn dependency:resolve` | Spring Boot 4.1.1 resolves — exit 0 |
+| 2026-08-22 | `mvn test-compile` | **BUILD SUCCESS** — 38 + 3 sources, `release 21`, 0 warnings |
+| 2026-08-22 | `mvn test` | **BUILD SUCCESS** — 32 tests, 0 failures, 0 errors |
+| 2026-08-22 | `mvn verify` | **BUILD FAILURE** — blocked by B-6, not by application code |
+| 2026-08-22 | `docker run hello-world` | Succeeds — Docker engine healthy |
+| 2026-08-22 | Testcontainers 1.21.3 → 1.21.4 | Fixed the Engine API 1.55 incompatibility (see TROUBLESHOOTING T-1) |
+| 2026-08-22 | `docker pull mysql:8.4` × 11 | All failed — CDN transfer `EOF` |
+

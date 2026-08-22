@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      BrainTwinX Backend
+      ==================
+      Central business/application API. Owns authentication, authorisation,
+      patient and scan management, AI orchestration, reporting, and audit.
+
+      Deliberate choices:
+        * Java 21 (LTS) target via maven.compiler.release, built by the host JDK 25.
+          Guarantees portable bytecode regardless of the building JDK. See
+          docs/ASSUMPTIONS.md A-11.
+        * No Lombok. Java 21 records cover the DTO use case, and avoiding an
+          annotation processor removes the most common source of breakage on new
+          JDK releases. Keeps dependencies minimal per brief section 60.
+        * Spring Boot 4.1.1 — supports the JDK 25 runtime, which matters because
+          test-time bytecode instrumentation (ByteBuddy via Mockito) must
+          understand the running JVM.
+    -->
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.braintwinx</groupId>
+    <artifactId>braintwinx-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>braintwinx-backend</name>
+    <description>AI-assisted Brain MRI Analysis Platform — application API</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!--
+          Pinned on the 1.x line. Note the known limitation on this development host:
+          the bundled docker-java cannot negotiate with Docker Engine API 1.55
+          (Docker Desktop 4.84) and receives HTTP 400 with an empty /info payload,
+          so integration tests cannot start a container here.
+          Diagnosis and status: docs/TROUBLESHOOTING.md T-1.
+          Testcontainers 2.x was evaluated and rejected for now: it reorganised its
+          artifact coordinates, so org.testcontainers:mysql and :junit-jupiter are no
+          longer managed by its BOM and the migration is not a version bump.
+        -->
+        <testcontainers.version>1.21.4</testcontainers.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- ===================== Web / API ===================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Bean Validation: every inbound DTO is validated at the boundary. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- ===================== Persistence ===================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!--
+          Flyway owns the schema. Hibernate ddl-auto is set to `validate` so the
+          application refuses to start if entities and migrations disagree,
+          rather than silently mutating a medical database.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- ===================== Observability ===================== -->
+        <!-- Health, readiness, and metrics endpoints (brief sections 17, 28). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- ===================== Test ===================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+          Integration tests run against a real MySQL container, not H2. An
+          in-memory substitute would not exercise the actual Flyway migrations,
+          MySQL-specific constraints, or index behaviour — which is precisely
+          what these tests exist to verify.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <!-- Parameter names are required for Bean Validation
+                             messages and for JPA constructor binding. -->
+                        <arg>-parameters</arg>
+                        <arg>-Xlint:all,-processing</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!--
+              Integration tests are separated from unit tests: they are slower
+              and require Docker. `mvn test` stays fast; `mvn verify` runs both.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
