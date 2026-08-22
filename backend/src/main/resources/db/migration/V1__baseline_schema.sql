@@ -59,7 +59,7 @@ CREATE TABLE users (
     last_login_at          DATETIME(6)  NULL,
     created_at             DATETIME(6)  NOT NULL,
     updated_at             DATETIME(6)  NOT NULL,
-    version                BIGINT       NOT NULL DEFAULT 0,
+    lock_version                BIGINT       NOT NULL DEFAULT 0,
 
     CONSTRAINT pk_users PRIMARY KEY (id),
     CONSTRAINT uq_users_public_id UNIQUE (public_id),
@@ -119,7 +119,7 @@ CREATE TABLE patients (
     archived_at        DATETIME(6) NULL,
     created_at         DATETIME(6) NOT NULL,
     updated_at         DATETIME(6) NOT NULL,
-    version            BIGINT      NOT NULL DEFAULT 0,
+    lock_version            BIGINT      NOT NULL DEFAULT 0,
 
     CONSTRAINT pk_patients PRIMARY KEY (id),
     CONSTRAINT uq_patients_code UNIQUE (patient_code),
@@ -167,7 +167,7 @@ CREATE TABLE model_versions (
     updated_at            DATETIME(6)  NOT NULL,
     -- Optimistic locking: model status changes (activate / deprecate) are
     -- administrative operations that must not race.
-    version               BIGINT       NOT NULL DEFAULT 0,
+    lock_version               BIGINT       NOT NULL DEFAULT 0,
 
     CONSTRAINT pk_model_versions PRIMARY KEY (id),
     CONSTRAINT uq_model_versions_name_version UNIQUE (model_name, version),
@@ -211,7 +211,7 @@ CREATE TABLE scans (
     uploaded_by_user_id BIGINT      NOT NULL,
     created_at         DATETIME(6)  NOT NULL,
     updated_at         DATETIME(6)  NOT NULL,
-    version            BIGINT       NOT NULL DEFAULT 0,
+    lock_version            BIGINT       NOT NULL DEFAULT 0,
 
     CONSTRAINT pk_scans PRIMARY KEY (id),
     CONSTRAINT uq_scans_public_id   UNIQUE (public_id),
@@ -272,7 +272,7 @@ CREATE TABLE analysis_jobs (
     finished_at          DATETIME(6)  NULL,
     created_at           DATETIME(6)  NOT NULL,
     updated_at           DATETIME(6)  NOT NULL,
-    version              BIGINT       NOT NULL DEFAULT 0,
+    lock_version              BIGINT       NOT NULL DEFAULT 0,
 
     CONSTRAINT pk_analysis_jobs PRIMARY KEY (id),
     CONSTRAINT uq_analysis_jobs_public_id UNIQUE (public_id),

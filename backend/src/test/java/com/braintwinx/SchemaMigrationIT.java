@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 
 /**
@@ -23,6 +24,15 @@ import org.springframework.dao.DataIntegrityViolationException;
  *       could bypass them. Each is exercised with raw SQL that deliberately attempts the
  *       forbidden write.</li>
  * </ol>
+ *
+ * <p><strong>On the expected exception types.</strong> CHECK-constraint violations are
+ * asserted as {@link DataAccessException} plus the constraint name, while UNIQUE violations
+ * are asserted as {@link DataIntegrityViolationException}. That asymmetry is not sloppiness:
+ * MySQL raises error 3819 for a violated CHECK, and 3819 is absent from Spring's MySQL
+ * data-integrity error-code list, so it is translated to {@code UncategorizedSQLException}
+ * rather than {@code DataIntegrityViolationException}. Asserting the constraint name is also
+ * strictly stronger than asserting an exception type alone — it proves the <em>intended</em>
+ * constraint rejected the write rather than merely that something went wrong.
  */
 @DisplayName("V1 baseline schema")
 class SchemaMigrationIT extends AbstractIntegrationTest {
@@ -113,7 +123,8 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
                         'INCREASING', '{"points":[1,2,3]}', FALSE, NOW(6))
                 """, patientId))
                 .as("A forecast must not be storable next to an insufficient-history outcome")
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("ck_growth_insufficient_history_has_no_forecast");
     }
 
     @Test
@@ -144,21 +155,49 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
                 VALUES (UUID(), ?, 'COMPLETED', 5, 'STABLE', FALSE, NOW(6))
                 """, patientId))
                 .as("A completed estimate without a model version must be rejected")
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("ck_growth_completed_has_model");
     }
 
     @Test
     @DisplayName("prediction confidence is constrained to [0,1]")
     void databaseRejectsOutOfRangeConfidence() {
+        // Real parent rows are created first so the write fails on the CHECK constraint
+        // rather than on a foreign key. Without them the test would pass for the wrong
+        // reason and would keep passing even if the confidence CHECK were removed.
+        long scanId = insertScan();
+        long modelVersionId = insertModelVersionIfAbsent();
+
         assertThatThrownBy(() -> jdbcTemplate.update("""
                 INSERT INTO predictions
                     (public_id, scan_id, predicted_class, confidence, probabilities,
                      model_version_id, preprocessing_version, inference_timestamp,
                      is_synthetic, created_at)
-                VALUES (UUID(), 1, 'glioma', 1.5, '{}', 1, '1.0.0', NOW(6), FALSE, NOW(6))
-                """))
+                VALUES (UUID(), ?, 'glioma', 1.5, '{"glioma":1.5}', ?, '1.0.0',
+                        NOW(6), FALSE, NOW(6))
+                """, scanId, modelVersionId))
                 .as("A confidence above 1 must never be storable")
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("ck_predictions_confidence");
+    }
+
+    @Test
+    @DisplayName("a valid prediction with in-range confidence is storable")
+    void databaseAcceptsValidConfidence() {
+        // Complement of the previous test: proves the CHECK does not block correct writes.
+        long scanId = insertScan();
+        long modelVersionId = insertModelVersionIfAbsent();
+
+        int inserted = jdbcTemplate.update("""
+                INSERT INTO predictions
+                    (public_id, scan_id, predicted_class, confidence, probabilities,
+                     model_version_id, preprocessing_version, inference_timestamp,
+                     is_synthetic, created_at)
+                VALUES (UUID(), ?, 'glioma', 0.87321, '{"glioma":0.87321}', ?, '1.0.0',
+                        NOW(6), FALSE, NOW(6))
+                """, scanId, modelVersionId);
+
+        assertThat(inserted).isEqualTo(1);
     }
 
     @Test
@@ -170,13 +209,14 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
                 INSERT INTO scans
                     (public_id, patient_id, scan_date, scan_type, storage_key,
                      detected_mime_type, file_size_bytes, content_sha256, status,
-                     uploaded_by_user_id, created_at, updated_at)
+                     uploaded_by_user_id, created_at, updated_at, lock_version)
                 VALUES (UUID(), ?, '2026-01-01', 'MRI_T1', 'scans/no-reason.png',
                         'image/png', 1024, REPEAT('a', 64), 'FAILED',
-                        1, NOW(6), NOW(6))
+                        1, NOW(6), NOW(6), 0)
                 """, patientId))
                 .as("Silent failure must not be representable")
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("ck_scans_failure_consistency");
     }
 
     @Test
@@ -186,11 +226,13 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
                 INSERT INTO patients
-                    (patient_code, sex, status, created_by_user_id, created_at, updated_at)
-                VALUES ('BTX-INCONSISTENT', 'UNKNOWN', 'ARCHIVED', 1, NOW(6), NOW(6))
+                    (patient_code, sex, status, created_by_user_id, created_at,
+                     updated_at, lock_version)
+                VALUES ('BTX-INCONSISTENT', 'UNKNOWN', 'ARCHIVED', 1, NOW(6), NOW(6), 0)
                 """))
                 .as("Archive status and archive timestamp must agree")
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataAccessException.class)
+                .hasMessageContaining("ck_patients_archived_consistency");
     }
 
     @Test
@@ -203,18 +245,18 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
                 INSERT INTO scans
                     (public_id, patient_id, scan_date, scan_type, storage_key,
                      detected_mime_type, file_size_bytes, content_sha256, status,
-                     uploaded_by_user_id, created_at, updated_at)
+                     uploaded_by_user_id, created_at, updated_at, lock_version)
                 VALUES (UUID(), ?, '2026-01-01', 'MRI_T1', ?, 'image/png', 2048, ?,
-                        'UPLOADED', 1, NOW(6), NOW(6))
+                        'UPLOADED', 1, NOW(6), NOW(6), 0)
                 """, patientId, "scans/dup-" + patientId + "-1.png", sha);
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
                 INSERT INTO scans
                     (public_id, patient_id, scan_date, scan_type, storage_key,
                      detected_mime_type, file_size_bytes, content_sha256, status,
-                     uploaded_by_user_id, created_at, updated_at)
+                     uploaded_by_user_id, created_at, updated_at, lock_version)
                 VALUES (UUID(), ?, '2026-02-01', 'MRI_T1', ?, 'image/png', 2048, ?,
-                        'UPLOADED', 1, NOW(6), NOW(6))
+                        'UPLOADED', 1, NOW(6), NOW(6), 0)
                 """, patientId, "scans/dup-" + patientId + "-2.png", sha))
                 .as("The same file must not be uploadable twice for one patient")
                 .isInstanceOf(DataIntegrityViolationException.class);
@@ -234,11 +276,52 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
         jdbcTemplate.update("""
                 INSERT INTO users
                     (id, public_id, username, email, password_hash, full_name, role,
-                     enabled, failed_login_attempts, created_at, updated_at, version)
+                     enabled, failed_login_attempts, created_at, updated_at, lock_version)
                 VALUES (1, UUID(), 'schema_fixture', 'fixture@example.invalid',
                         'not-a-real-hash', 'Schema Fixture', 'ADMIN',
                         TRUE, 0, NOW(6), NOW(6), 0)
                 """);
+    }
+
+    /** @return the id of a registered model version, creating one if absent */
+    private long insertModelVersionIfAbsent() {
+        Long existing = jdbcTemplate.queryForObject("""
+                SELECT MIN(id) FROM model_versions WHERE model_name = 'FixtureClassifier'
+                """, Long.class);
+        if (existing != null) {
+            return existing;
+        }
+        jdbcTemplate.update("""
+                INSERT INTO model_versions
+                    (model_name, model_type, version, framework, preprocessing_version,
+                     status, created_at, updated_at, lock_version)
+                VALUES ('FixtureClassifier', 'CLASSIFIER', '1.0.0', 'PyTorch', '1.0.0',
+                        'ACTIVE', NOW(6), NOW(6), 0)
+                """);
+        Long id = jdbcTemplate.queryForObject("""
+                SELECT MIN(id) FROM model_versions WHERE model_name = 'FixtureClassifier'
+                """, Long.class);
+        assertThat(id).isNotNull();
+        return id;
+    }
+
+    /** @return the id of a freshly created scan belonging to a new patient */
+    private long insertScan() {
+        long patientId = insertPatientWithUser();
+        String key = "scans/fixture-" + java.util.UUID.randomUUID() + ".png";
+        jdbcTemplate.update("""
+                INSERT INTO scans
+                    (public_id, patient_id, scan_date, scan_type, storage_key,
+                     detected_mime_type, file_size_bytes, content_sha256, status,
+                     uploaded_by_user_id, created_at, updated_at, lock_version)
+                VALUES (UUID(), ?, '2026-01-01', 'MRI_T1', ?, 'image/png', 4096, ?,
+                        'UPLOADED', 1, NOW(6), NOW(6), 0)
+                """, patientId, key,
+                java.util.UUID.randomUUID().toString().replace("-", "") + "a".repeat(32));
+        Long id = jdbcTemplate.queryForObject(
+                "SELECT id FROM scans WHERE storage_key = ?", Long.class, key);
+        assertThat(id).isNotNull();
+        return id;
     }
 
     /** @return the id of a freshly created active patient */
@@ -247,8 +330,9 @@ class SchemaMigrationIT extends AbstractIntegrationTest {
         String code = "BTX-" + java.util.UUID.randomUUID().toString().substring(0, 8);
         jdbcTemplate.update("""
                 INSERT INTO patients
-                    (patient_code, sex, status, created_by_user_id, created_at, updated_at)
-                VALUES (?, 'UNKNOWN', 'ACTIVE', 1, NOW(6), NOW(6))
+                    (patient_code, sex, status, created_by_user_id, created_at,
+                     updated_at, lock_version)
+                VALUES (?, 'UNKNOWN', 'ACTIVE', 1, NOW(6), NOW(6), 0)
                 """, code);
         Long id = jdbcTemplate.queryForObject(
                 "SELECT id FROM patients WHERE patient_code = ?", Long.class, code);

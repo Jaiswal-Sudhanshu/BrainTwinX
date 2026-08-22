@@ -18,7 +18,7 @@ tests, integration, and manual verification where applicable:
 | Phase | Name | Status |
 |---|---|---|
 | P1 | Repository audit & scaffold | `[x]` **COMPLETE** |
-| P2 | Architecture & database | `[-]` IN_PROGRESS — code complete, schema verification blocked |
+| P2 | Architecture & database | `[x]` **COMPLETE** — `mvn verify` green, 45 tests |
 | P3 | Authentication & authorisation | `[ ]` NOT_STARTED |
 | P4 | Patient management | `[ ]` NOT_STARTED |
 | P5 | MRI upload & validation | `[ ]` NOT_STARTED |
@@ -66,8 +66,8 @@ tests, integration, and manual verification where applicable:
 
 ## P2 — Architecture & database
 
-**Status: IN_PROGRESS.** Implementation complete; schema verification **blocked on an
-environment issue**, not on code.
+**Status: COMPLETE.** `mvn verify` **BUILD SUCCESS** — 45 tests (32 unit + 13 integration
+against real MySQL 8.4), 0 failures, 0 errors. Exit criteria met.
 
 ### Completed and verified
 
@@ -92,28 +92,35 @@ environment issue**, not on code.
 - [x] ADR-005 REST for backend↔AI communication
 - [x] `docs/TROUBLESHOOTING.md` — 7 entries, each with diagnosed root cause
 
-### Blocked
+### Verified against real MySQL 8.4
 
-- [!] **`mvn verify` (integration tests) — BLOCKED.** See B-6 below. `mvn test` passes;
-      only the Testcontainers-backed suite cannot run.
-- [!] Testcontainers MySQL integration test — migration applies from empty schema
-- [!] Hibernate `ddl-auto=validate` agreement between entities and migration **asserted at
-      runtime** (the code is written; the assertion has not executed)
-- [!] The 9 schema-level safety-invariant tests in `SchemaMigrationIT` (forecast-with-
-      insufficient-history rejection, confidence range, failed-scan-must-have-reason,
-      duplicate-upload rejection, no dice/iou columns, …)
+- [x] **`mvn verify` — BUILD SUCCESS**, 45 tests, 0 failures, 0 errors
+- [x] Flyway applies V1 from an empty schema and records it successful
+- [x] All 11 expected tables created
+- [x] Hibernate `ddl-auto=validate` **agrees** between all 12 entities and the migration
+      (proven by the context loading at all)
+- [x] `segmentation_results` has **no** dice/iou column
+- [x] All three inference tables carry `is_synthetic`
+- [x] A forecast alongside `INSUFFICIENT_HISTORY` is **rejected**
+      (`ck_growth_insufficient_history_has_no_forecast`)
+- [x] An honest `INSUFFICIENT_HISTORY` row **is** storable — the constraint does not block
+      correct behaviour
+- [x] An unattributed `COMPLETED` estimate is rejected (`ck_growth_completed_has_model`)
+- [x] Out-of-range confidence is rejected (`ck_predictions_confidence`)
+- [x] In-range confidence **is** storable
+- [x] A `FAILED` scan without a reason is rejected (`ck_scans_failure_consistency`)
+- [x] An inconsistent archive state is rejected (`ck_patients_archived_consistency`)
+- [x] A duplicate upload for the same patient is rejected
+- [x] MySQL ≥ 8.0.16 guard, so no assertion can pass vacuously
+- [x] Maven Wrapper committed and **verified to build with no host Maven on PATH**
+- [x] `docs/system-design/01-SYSTEM-OVERVIEW.md`
+- [x] `docs/system-design/02-HIGH-LEVEL-DESIGN.md`
+- [x] `docs/system-design/05-DATABASE-DESIGN.md`
+- [x] `docs/system-design/14-ER-DIAGRAM.md`
 
-### Not yet started
-
-- [ ] `docs/system-design/01-SYSTEM-OVERVIEW.md`
-- [ ] `docs/system-design/02-HIGH-LEVEL-DESIGN.md`
-- [ ] `docs/system-design/05-DATABASE-DESIGN.md`
-- [x] `docs/system-design/14-ER-DIAGRAM.md` — Mermaid ER diagram, cardinality, ON DELETE and index rationale (designed, not verified)
-- [ ] Maven Wrapper (`mvnw`) committed — currently depends on host Maven in `~/Downloads`
-      (risk R-6)
-
-**Exit criteria met: NO.** The schema is written but has never been applied to a real
-database, so it is **not** verified. Nothing in this phase may be marked `VERIFIED`.
+**Exit criteria met: YES.** The schema has been applied to a real MySQL instance, every
+entity mapping validated against it, and all 14 medical-safety invariants exercised by tests
+that attempt the forbidden write and assert the specific constraint name.
 
 
 ---
@@ -348,7 +355,7 @@ database, so it is **not** verified. Nothing in this phase may be marked `VERIFI
 | B-3 | Trained forecasting weights | No longitudinal series | Owner supplies serial-scan data |
 | B-4 | Reported model accuracy metrics | No evaluation run possible | B-1/B-2/B-3 resolved |
 | B-5 | Live LLM explanations | No provider/API key configured | Owner supplies provider config |
-| B-6 | **Schema verification (`mvn verify`)** | **Cannot pull the `mysql:8.4` Docker image.** 12 pull attempts failed, and the AWS ECR public mirror fails identically on a different CDN host with `httpReadSeeker: failed open: ... EOF` from Docker Hub's CDN. Docker itself works (`hello-world` runs; `testcontainers/ryuk:0.12.0` pulled successfully and its container was created), and the Testcontainers↔Docker connection defect was found and fixed. The only remaining obstacle is downloading the ~250 MB database image. | A successful `docker pull mysql:8.4` on a stable connection. Then `mvn verify` runs unchanged — no code change required. |
+| ~~B-6~~ | ~~Schema verification (`mvn verify`)~~ — **RESOLVED**: `mysql:8.4` pulled on retry attempt 8 (Docker caches completed layers, so repeated attempts made incremental progress). | **Cannot pull the `mysql:8.4` Docker image.** 12 pull attempts failed, and the AWS ECR public mirror fails identically on a different CDN host with `httpReadSeeker: failed open: ... EOF` from Docker Hub's CDN. Docker itself works (`hello-world` runs; `testcontainers/ryuk:0.12.0` pulled successfully and its container was created), and the Testcontainers↔Docker connection defect was found and fixed. The only remaining obstacle is downloading the ~250 MB database image. | A successful `docker pull mysql:8.4` on a stable connection. Then `mvn verify` runs unchanged — no code change required. |
 
 These are **documented gaps, not silent omissions.** The corresponding interfaces,
 pipelines, and harnesses are still built and tested so that resolving each blocker is a

@@ -226,3 +226,73 @@ guesswork:
 - CORS failures between frontend and backend (Phase 12)
 - Python dependency resolution on Python 3.14 (Phase 6)
 - Docker Compose startup ordering (Phase 15)
+
+
+---
+
+## T-7 — Flyway migrations never run; Hibernate reports "missing table"
+
+**Symptom.** The application or an integration test fails at startup:
+
+```
+SchemaManagementException: Schema validation: missing table [analysis_jobs]
+```
+
+with **no Flyway log output at all** — no "Migrating schema", no "Successfully applied".
+
+**Root cause.** `org.flywaydb:flyway-core` alone is **not sufficient on Spring Boot 4**. Boot 4
+split the monolithic `spring-boot-autoconfigure` into per-technology modules, so Flyway's
+auto-configuration now lives in its own artifact. Without it, Flyway is on the classpath but is
+never activated: no migration runs, the schema stays empty, and Hibernate's `validate` then
+correctly complains that the tables are missing.
+
+The give-away is the package name in the stack trace — `org.springframework.boot.hibernate.autoconfigure.HibernateJpaConfiguration`
+rather than the Boot 3 `org.springframework.boot.autoconfigure.orm.jpa.*`. That naming is the
+visible sign of the module split.
+
+**Fix.** Add the module alongside `flyway-core` (version managed by the parent):
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-flyway</artifactId>
+</dependency>
+```
+
+**Generalisation worth remembering:** on Spring Boot 4, a technology being on the classpath no
+longer implies its auto-configuration is active. If a Boot feature silently does nothing after
+an upgrade from 3.x, check whether it now needs its own `spring-boot-<tech>` module.
+
+---
+
+## T-8 — A CHECK-constraint test fails with `UncategorizedSQLException`
+
+**Symptom.** A test asserting that the database rejects an invalid row fails — not because the
+row was accepted, but because the exception type does not match:
+
+```
+Expecting actual throwable to be an instance of:
+  org.springframework.dao.DataIntegrityViolationException
+but was:
+  org.springframework.jdbc.UncategorizedSQLException ... error code [3819]
+  Check constraint 'ck_patients_archived_consistency' is violated.
+```
+
+**Root cause.** The constraint is working perfectly. MySQL raises error **3819**
+(`ER_CHECK_CONSTRAINT_VIOLATED`) for a violated CHECK, and 3819 is **absent** from Spring's
+MySQL data-integrity error-code list. Spring therefore translates it to
+`UncategorizedSQLException` rather than `DataIntegrityViolationException`. UNIQUE violations
+(error 1062) *are* in that list, which is why they translate as expected — hence the confusing
+asymmetry where some constraint tests pass and others do not.
+
+**Fix.** Assert on the common parent plus the constraint name:
+
+```java
+assertThatThrownBy(() -> jdbcTemplate.update(...))
+        .isInstanceOf(DataAccessException.class)
+        .hasMessageContaining("ck_patients_archived_consistency");
+```
+
+This is also **strictly stronger** than asserting an exception type alone: it proves the
+*intended* constraint rejected the write, rather than merely that something went wrong. A test
+that only checks the type would keep passing if an unrelated foreign key happened to fail first.

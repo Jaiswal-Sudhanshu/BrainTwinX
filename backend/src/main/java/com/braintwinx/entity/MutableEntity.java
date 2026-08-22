@@ -21,16 +21,26 @@ public abstract class MutableEntity extends BaseEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /**
+     * Optimistic-lock counter.
+     *
+     * <p>Mapped to {@code lock_version}, not {@code version}, deliberately. "Version" is an
+     * overloaded word in this domain — {@link ModelVersion} carries a semantic model version
+     * string whose natural column name is {@code version} — and mapping an infrastructure
+     * concern to that name collided with it. Naming the lock column explicitly keeps the
+     * domain meaning of {@code version} available to entities that need it.
+     */
     @Version
-    @Column(name = "version", nullable = false)
-    private long version;
+    @Column(name = "lock_version", nullable = false)
+    private long lockVersion;
 
     public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public long getVersion() {
-        return version;
+    /** @return the optimistic-lock counter, incremented by the persistence layer on update */
+    public long getLockVersion() {
+        return lockVersion;
     }
 
     protected void setUpdatedAt(Instant updatedAt) {

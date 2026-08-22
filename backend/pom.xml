@@ -76,7 +76,18 @@
           Flyway owns the schema. Hibernate ddl-auto is set to `validate` so the
           application refuses to start if entities and migrations disagree,
           rather than silently mutating a medical database.
+
+          spring-boot-flyway is REQUIRED in addition to flyway-core. Spring Boot 4
+          split the monolithic spring-boot-autoconfigure into per-technology modules
+          (note e.g. org.springframework.boot.hibernate.autoconfigure), so
+          flyway-core alone puts Flyway on the classpath without ever activating its
+          auto-configuration — migrations then never run and Hibernate validation
+          fails with "missing table". Verified by observing exactly that.
         -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>

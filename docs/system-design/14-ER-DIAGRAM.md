@@ -53,7 +53,7 @@ erDiagram
         boolean enabled
         int failed_login_attempts "CHECK >= 0"
         datetime6 locked_until "null unless locked"
-        bigint version "optimistic lock"
+        bigint lock_version "optimistic lock"
     }
 
     refresh_tokens {
