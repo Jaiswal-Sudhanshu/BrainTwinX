@@ -19,7 +19,7 @@ tests, integration, and manual verification where applicable:
 |---|---|---|
 | P1 | Repository audit & scaffold | `[x]` **COMPLETE** |
 | P2 | Architecture & database | `[x]` **COMPLETE** — `mvn verify` green, 45 tests |
-| P3 | Authentication & authorisation | `[ ]` NOT_STARTED |
+| P3 | Authentication & authorisation | `[x]` **COMPLETE** — `mvn verify` green, 94 tests |
 | P4 | Patient management | `[ ]` NOT_STARTED |
 | P5 | MRI upload & validation | `[ ]` NOT_STARTED |
 | P6 | AI service foundation | `[ ]` NOT_STARTED |
@@ -127,20 +127,56 @@ that attempt the forbidden write and assert the specific constraint name.
 
 ## P3 — Authentication & authorisation
 
-- [ ] User entity + roles ADMIN / DOCTOR / RESEARCHER
-- [ ] BCrypt password hashing
-- [ ] JWT issue + validate
-- [ ] Access + refresh flow
-- [ ] `SecurityFilterChain` — deny by default
-- [ ] `POST /api/v1/auth/login` · `logout` · `refresh`
-- [ ] `GlobalExceptionHandler` + standard error envelope with `traceId`
-- [ ] Correlation ID filter
-- [ ] Audit events LOGIN / LOGOUT
-- [ ] Test: unauthenticated → 401, no stack trace
-- [ ] Test: wrong role → 403
-- [ ] Test: expired token → 401 with distinguishable code
-- [ ] Test: every mapped endpoint has an explicit authorisation rule
-- [ ] Test: no password / token / secret reaches any log
+**Status: COMPLETE.** `mvn verify` **BUILD SUCCESS** — 94 tests (57 unit + 37 integration),
+0 failures, 0 errors.
+
+- [x] User entity + roles ADMIN / DOCTOR / RESEARCHER (from P2)
+- [x] BCrypt password hashing — strength 12, above the Spring default of 10
+- [x] JWT issue + validate — HS256 fixed at both ends, issuer verified
+- [x] Access + refresh flow with **rotation** and reuse detection
+- [x] `SecurityFilterChain` — **`anyRequest().denyAll()`**, not `authenticated()`
+- [x] `POST /api/v1/auth/login` · `refresh` · `logout`
+- [x] `GlobalExceptionHandler` + `ApiError` envelope with `traceId`
+- [x] `ApiErrorCode` — closed enum, each carrying its HTTP status
+- [x] `CorrelationIdFilter` — validates and length-caps inbound trace IDs
+- [x] `AuditService` — **allow-listed** metadata keys, `REQUIRES_NEW` propagation
+- [x] Audit events LOGIN / LOGOUT / LOGIN_FAILED / TOKEN_REFRESHED
+- [x] Security headers: nosniff, DENY, HSTS, CSP, no-referrer
+- [x] CORS restricted to an explicit origin list, never a wildcard
+- [x] ADR-006 JWT authentication
+
+### Verified by test
+
+- [x] Unauthenticated → 401 with the standard envelope, **no stack trace**, and asserted
+      free of `Exception` / `com.braintwinx` / `org.springframework`
+- [x] Expired token → 401 `TOKEN_EXPIRED`, distinguishable from `TOKEN_INVALID`
+- [x] **Deny-by-default proven**: 8 unmapped / unimplemented / internal paths all denied,
+      including `/internal/**` and `/actuator/env`
+- [x] `alg:none` forged token rejected
+- [x] Token signed with a different key rejected
+- [x] Token from a different issuer rejected even when validly signed
+- [x] Refresh token replayed as an access token rejected (`typ` claim)
+- [x] Unknown role in a token rejected, never defaulted
+- [x] 6 malformed token shapes rejected
+- [x] Login failure is **uniform** — body asserted not to contain `username`, `password`,
+      `not found`, or `unknown`
+- [x] Trace ID present on every response, including rejected ones
+- [x] Hostile CRLF trace ID replaced, not echoed (log-injection defence)
+- [x] Well-formed inbound trace ID honoured for cross-service correlation
+- [x] Token responses carry `Cache-Control: no-store`
+- [x] JWT secret validation: missing, too short, and 3 placeholder shapes all abort startup
+- [x] `JwtProperties.toString()` redacts the secret
+- [x] Refresh tokens unique across 500 draws; hashing deterministic and non-reversing
+
+### Deferred with reason
+
+- [ ] Rate limiting on `/auth/login` — Phase 14. Lockout after 5 failures for 15 minutes is
+      in place now; lockout is **temporary** on purpose, since a permanent lock would let an
+      attacker deny a clinician access to patient records.
+- [ ] Role-specific endpoint rules — deferred to the phases that add those endpoints, since
+      `denyAll()` means each must grant access explicitly anyway.
+
+**Exit criteria met: YES.**
 
 ---
 

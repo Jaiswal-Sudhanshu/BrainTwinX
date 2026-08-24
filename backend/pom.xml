@@ -39,6 +39,7 @@
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jjwt.version>0.12.6</jjwt.version>
         <!--
           Pinned on the 1.x line. Note the known limitation on this development host:
           the bundled docker-java cannot negotiate with Docker Engine API 1.55
@@ -59,6 +60,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+
+        <!--
+          NOTE ON JACKSON: Spring Boot 4 ships Jackson 3, whose packages are
+          tools.jackson.* rather than com.fasterxml.jackson.*. Jackson arrives
+          transitively via starter-web (spring-boot-starter-jackson), so no extra
+          dependency is required — but imports must use the new package names.
+          Only jackson-annotations remains under com.fasterxml.jackson.annotation.
+          See docs/TROUBLESHOOTING.md T-9.
+        -->
 
         <!-- Bean Validation: every inbound DTO is validated at the boundary. -->
         <dependency>
@@ -110,10 +120,45 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- ===================== Security ===================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!--
+          JJWT, split across api/impl/jackson so only the API is compile-visible and
+          the implementation stays a runtime detail. Not managed by the Spring Boot
+          parent, so the version is pinned explicitly.
+        -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- ===================== Test ===================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 

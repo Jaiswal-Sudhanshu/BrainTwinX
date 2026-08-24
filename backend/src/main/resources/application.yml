@@ -98,6 +98,19 @@ management:
 # ===========================================================================
 braintwinx:
 
+  jwt:
+    # No default. A missing JWT_SECRET must abort startup rather than fall back to
+    # something guessable — a silent weak key is worse than a refusal to run.
+    # JwtProperties.validate() also rejects secrets under 256 bits and known
+    # placeholder values. Generate with: openssl rand -base64 48
+    secret: ${JWT_SECRET}
+    access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:900}
+    refresh-token-ttl-seconds: ${JWT_REFRESH_TOKEN_TTL_SECONDS:604800}
+    issuer: ${JWT_ISSUER:braintwinx}
+
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
   storage:
     root: ${STORAGE_ROOT:./storage}
     max-upload-size-bytes: ${MAX_UPLOAD_SIZE_BYTES:52428800}

@@ -296,3 +296,92 @@ assertThatThrownBy(() -> jdbcTemplate.update(...))
 This is also **strictly stronger** than asserting an exception type alone: it proves the
 *intended* constraint rejected the write, rather than merely that something went wrong. A test
 that only checks the type would keep passing if an unrelated foreign key happened to fail first.
+
+
+---
+
+## T-9 — `package com.fasterxml.jackson.databind does not exist` on Spring Boot 4
+
+**Symptom.** Code using `ObjectMapper` fails to compile even though `spring-boot-starter-web` is
+present:
+
+```
+package com.fasterxml.jackson.core does not exist
+package com.fasterxml.jackson.databind does not exist
+cannot find symbol: class ObjectMapper
+```
+
+**Root cause.** **Spring Boot 4 ships Jackson 3, whose packages are `tools.jackson.*`.** Jackson
+*is* on the classpath — it arrives via `starter-web` → `spring-boot-starter-jackson` → 
+`tools.jackson.core:jackson-databind:3.x`. The old `com.fasterxml.jackson.*` packages are simply
+gone, apart from **annotations**, which remain at `com.fasterxml.jackson.annotation` 
+(`jackson-annotations` is still a 2.x artifact).
+
+Confirm with:
+
+```bash
+./mvnw dependency:tree | grep -i jackson
+```
+
+Expect to see `tools.jackson.core:jackson-databind` at **compile** scope. A
+`com.fasterxml.jackson.core:jackson-databind` line at **runtime** scope may also appear, pulled in
+by a library such as `jjwt-jackson` — that one is not compile-visible, which is why the error
+occurs despite the name appearing in the tree.
+
+**Fix.** Migrate the imports; no dependency change is needed.
+
+| Boot 3 / Jackson 2 | Boot 4 / Jackson 3 |
+|---|---|
+| `com.fasterxml.jackson.databind.ObjectMapper` | `tools.jackson.databind.ObjectMapper` |
+| `com.fasterxml.jackson.core.JsonProcessingException` | `tools.jackson.core.JacksonException` |
+| `com.fasterxml.jackson.annotation.JsonInclude` | **unchanged** |
+
+Note also that Jackson 3 made its exceptions **unchecked**: `JacksonException` extends
+`RuntimeException`, so `writeValueAsString` no longer forces a `catch`.
+
+**A wrong turn worth recording.** Adding `spring-boot-starter-json` looks like the fix and is not
+— it changes nothing, because Jackson was never missing. Diagnosing this properly requires reading
+the dependency tree rather than assuming a module split (contrast with T-7, where a module
+genuinely *was* missing). Beware `./mvnw -q dependency:list`: `-q` suppresses the list itself, so
+an empty `grep` proves nothing.
+
+---
+
+## T-10 — Second integration-test class fails with "Communications link failure"
+
+**Symptom.** The first integration-test class passes. A later one fails on every test that touches
+the database:
+
+```
+CJCommunicationsException: Communications link failure
+Caused by: java.net.ConnectException: Connection refused: getsockopt
+SQLTransientConnectionException: braintwinx-pool - Connection is not available,
+    request timed out after 10000ms
+```
+
+**Root cause.** A `static @Container` field declared on a shared `@Testcontainers` **abstract base
+class**. The JUnit extension ties that container's lifecycle to the test class, so it is
+**stopped after the first subclass completes**. Every subsequent class inherits a reference to a
+stopped container. Spring has meanwhile cached the application context with the original JDBC URL,
+so the symptom presents as a connectivity fault rather than a lifecycle one — which is what makes
+it confusing.
+
+The 10-second delays in the failure output are the HikariCP connection timeout, not slow tests.
+
+**Fix.** Use the documented **singleton container** pattern: start it once in a static
+initialiser and never stop it.
+
+```java
+@SpringBootTest                       // note: NO @Testcontainers
+public abstract class AbstractIntegrationTest {
+
+    @SuppressWarnings("resource")     // never closed on purpose
+    protected static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4") ...;
+
+    static { MYSQL.start(); }
+}
+```
+
+One container is then shared by every integration test in the JVM, which is also faster than a
+per-class restart. Cleanup is handled by the Testcontainers **Ryuk** sidecar at JVM exit, so
+nothing is leaked by not calling `stop()`.
