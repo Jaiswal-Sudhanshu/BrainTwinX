@@ -179,6 +179,30 @@ Each entry states the **ambiguity**, the **assumption taken**, the **reason**, a
 
 ---
 
+## A-16 — Patient access scope defaults to least privilege
+
+| | |
+|---|---|
+| **Ambiguity** | The brief specifies three roles (§7) and requires IDOR protection (§54), but never states which patients a given clinician may access. That is a clinical/organisational policy question. |
+| **Assumption** | ADMIN unrestricted; **DOCTOR restricted to patients they created**; RESEARCHER read-only across all patients. Out-of-scope access returns **404, never 403**. |
+| **Reason** | The failure modes are not symmetric. Too narrow means a clinician cannot see a colleague's patient — visible, reported immediately, fixed by widening one method. Too broad means unauthorised access to medical records that nobody notices. The reversible error is the right default. RESEARCHER is unscoped because scoping research to "records you created" is incoherent, and records are already minimised (A-8). |
+| **Known limitation** | **The caseload model may not match real clinical workflow.** Handover, coverage, and multidisciplinary teams are genuine needs it does not serve. A care-team model was considered and rejected as premature — it would require a grants table and a granting policy the brief does not describe (§58). |
+| **Revisit when** | A clinical stakeholder defines the intended sharing model. Widening requires changing only `PatientService.hasUnrestrictedScope`. Full reasoning in [ADR-007](./ADR/ADR-007-patient-access-scope.md). |
+
+---
+
+## A-17 — `patientCode` is immutable, and archiving is a distinct operation
+
+| | |
+|---|---|
+| **Ambiguity** | Brief §8 lists "Update patient" without saying which fields are mutable. |
+| **Assumption** | `patientCode` cannot be changed, and `status` cannot be changed through the update endpoint. Archiving has its own endpoint. |
+| **Reason** | `patientCode` is the identifier every scan, prediction, report, and audit row is correlated by; letting it change would silently sever a patient from their own history. Archiving is an audited lifecycle event, not a field a generic update should be able to flip — and the database CHECK requires `status` and `archived_at` to agree, so it needs the entity's guarded mutator. |
+| **Consequence** | `PatientUpdateRequest` contains only `birthYear` and `sex`. A correction to a mis-entered code requires creating a new record, which is the safer behaviour for a medical identifier. |
+| **Revisit when** | A correction workflow is specified. It would need its own audited operation and a migration story for referencing rows. |
+
+---
+
 ## Medical disclaimer
 
 BrainTwinX provides AI-assisted image analysis for research and decision-support

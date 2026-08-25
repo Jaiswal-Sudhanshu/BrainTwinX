@@ -20,7 +20,7 @@ tests, integration, and manual verification where applicable:
 | P1 | Repository audit & scaffold | `[x]` **COMPLETE** |
 | P2 | Architecture & database | `[x]` **COMPLETE** — `mvn verify` green, 45 tests |
 | P3 | Authentication & authorisation | `[x]` **COMPLETE** — `mvn verify` green, 94 tests |
-| P4 | Patient management | `[ ]` NOT_STARTED |
+| P4 | Patient management | `[x]` **COMPLETE** — `mvn verify` green, 146 tests |
 | P5 | MRI upload & validation | `[ ]` NOT_STARTED |
 | P6 | AI service foundation | `[ ]` NOT_STARTED |
 | P7 | CNN classification | `[ ]` NOT_STARTED |
@@ -182,16 +182,65 @@ that attempt the forbidden write and assert the specific constraint name.
 
 ## P4 — Patient management
 
-- [ ] Patient entity with public-safe `patientCode`
-- [ ] Create / read / update / archive (soft)
-- [ ] Pagination + sorting
-- [ ] Bean Validation + field-level error responses
-- [ ] Duplicate `patientCode` handling
-- [ ] DTO + mapper layer (no JPA entity exposed from controllers)
-- [ ] Audit events PATIENT_CREATED / PATIENT_UPDATED
-- [ ] Test: full CRUD
-- [ ] Test: IDOR — cannot access out-of-scope patient
-- [ ] Test: no PHI in URLs, logs, or error messages
+**Status: COMPLETE.** `mvn verify` **BUILD SUCCESS** — **146 tests** (72 unit + 74 integration),
+**0 failures, 0 errors**.
+
+- [x] Patient entity with public-safe `patientCode` (from P2)
+- [x] DTOs: `PatientCreateRequest`, `PatientUpdateRequest`, `PatientResponse`, `PageResponse`
+- [x] `PatientMapper` — hand-written, one-way, so adding an entity field cannot silently
+      start exposing it
+- [x] `PatientService` — all access-scope enforcement lives here, not the controller
+- [x] `PatientController` — thin; `@PreAuthorize` is a coarse role gate only
+- [x] Repository scoping via `findByCreatedByAndStatus`, with `@EntityGraph` on the
+      security-critical path to avoid an N+1 on every scope check
+- [x] Create / read / update / archive (soft) + paginated listing
+- [x] Bean Validation with field-level error responses
+- [x] Duplicate `patientCode` → 409
+- [x] RBAC: ADMIN unrestricted · DOCTOR own caseload · RESEARCHER read-only (ADR-007)
+- [x] Audit events PATIENT_CREATED / VIEWED / UPDATED / ARCHIVED, plus failed creates
+- [x] `ConstraintViolationException` handler added — request-parameter violations were
+      escaping as 500
+- [x] ADR-007 patient access scope
+- [x] ASSUMPTIONS.md A-16 (caseload scope), A-17 (immutable patient code)
+
+### Verified by test
+
+**IDOR (the central assertion):**
+- [x] Doctor B reading Doctor A's patient → **404, not 403**
+- [x] The denied response is asserted **identical** to a genuinely-absent one
+- [x] Doctor B cannot update or archive Doctor A's patient
+- [x] A doctor's listing contains only their own patients — scoped **in the query**
+- [x] ADMIN and RESEARCHER have unrestricted read
+
+**PHI leakage:**
+- [x] A denied response contains no `birthYear`, `sex`, or field names
+- [x] A validation failure names the field but does **not** echo the rejected value
+- [x] Responses omit the internal id, `createdBy`, and `lockVersion`
+- [x] The creating clinician's username never appears in a response
+
+**Validation:**
+- [x] Blank code → 400 with `fieldErrors[0].field == patientCode`
+- [x] 7 malformed codes rejected (path traversal, spaces, slashes, quotes, semicolon,
+      leading hyphen)
+- [x] 4 out-of-range birth years rejected
+- [x] Unknown body field rejected rather than silently ignored
+- [x] Oversized page size → 400 (was 500 before the handler was added)
+
+**State and lifecycle:**
+- [x] Archive is soft — record still retrievable with `status=ARCHIVED`
+- [x] Archive is idempotent, and a repeat does **not** add a second audit row
+- [x] An archived patient cannot be updated → 409
+- [x] Archived records excluded from the default listing
+- [x] Partial update leaves omitted fields unchanged
+- [x] `sex` defaults to `UNKNOWN` rather than being inferred
+
+**Cross-cutting:**
+- [x] Audit rows record the **public** code, never an internal id
+- [x] Failed create audited with `success = FALSE`
+- [x] Trace ID present on responses and in the error envelope
+- [x] A principal that no longer resolves to an enabled user is rejected
+
+**Exit criteria met: YES.**
 
 ---
 
@@ -416,4 +465,8 @@ A record of what has actually been executed, so no status above rests on assumpt
 | 2026-08-22 | `docker run hello-world` | Succeeds — Docker engine healthy |
 | 2026-08-22 | Testcontainers 1.21.3 → 1.21.4 | Fixed the Engine API 1.55 incompatibility (see TROUBLESHOOTING T-1) |
 | 2026-08-22 | `docker pull mysql:8.4` × 11 | All failed — CDN transfer `EOF` |
+| 2026-08-22 | `docker pull mysql:8.4` retry loop | **Succeeded on attempt 8** — Docker caches completed layers |
+| 2026-08-22 | `mvn verify` (P2 complete) | **BUILD SUCCESS** — 45 tests, 0 failures |
+| 2026-08-24 | `mvn verify` (P3 complete) | **BUILD SUCCESS** — 94 tests, 0 failures |
+| 2026-08-25 | `mvn verify` (P4 complete) | **BUILD SUCCESS** — **146 tests** (72 unit + 74 integration), **0 failures, 0 errors** |
 

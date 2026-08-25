@@ -1,6 +1,6 @@
 # BrainTwinX — Current State
 
-**Audit date:** 2026-08-22
+**Audit date:** 2026-08-22 · **Progress updated:** 2026-08-25
 **Audited by:** Engineering owner (initial repository audit)
 **Audit scope:** `C:\Users\jsudh\projects\BrainTwinx` and the surrounding host filesystem
 **Document status:** AUTHORITATIVE for the pre-implementation baseline
@@ -197,10 +197,51 @@ No secrets were found committed, since nothing was committed.
 
 ---
 
-## 17. What this document will become
+## 17. Progress since baseline
 
-This file records the **baseline only**. It is intentionally frozen as a historical
-record of the starting point.
+The sections above are **frozen as the audited starting point** (2026-08-22). This section
+records verified progress against it, so the document stays useful without rewriting history.
+
+| Phase | Status | Verification |
+|---|---|---|
+| P1 Audit & scaffold | ✅ COMPLETE | 9 audit checks; `.gitignore` proven to exclude `.env`, PHI, weights |
+| P2 Architecture & database | ✅ COMPLETE | `mvn verify` — 45 tests; 11 tables; 14 safety invariants exercised |
+| P3 Authentication & RBAC | ✅ COMPLETE | `mvn verify` — 94 tests; deny-by-default proven on 8 paths |
+| P4 Patient management | ✅ COMPLETE | `mvn verify` — **146 tests** (72 unit + 74 integration), 0 failures, 0 errors |
+| P5–P16 | ⬜ NOT STARTED | — |
+
+**Risks from §16 now closed:**
+
+| ID | Was | Now |
+|---|---|---|
+| R-4 | Python 3.14 may lack ML wheels | Closed — `torch 2.13.0` cp314 verified available |
+| R-5 | Java 25 vs Spring Boot support | Closed — Spring Boot 4.1.1 builds and runs; `--release 21` |
+| R-6 | Maven runs from `~/Downloads` | Closed — wrapper committed and verified with no host Maven on `PATH` |
+| R-7 | MySQL not installed locally | Closed — containerised MySQL 8.4 is the supported path and is in use |
+
+**Risks still open:** R-1 (no dataset), R-2 (medical-safety misrepresentation — mitigated by
+14 schema-enforced invariants but permanently live), R-3 (no LLM provider), R-8 (scope vs.
+single pass), R-9 (patient data sensitivity — mitigated in P4 by scope enforcement, PHI-free
+error responses, and audit logging, all under test).
+
+**Toolchain findings added since baseline** (each cost real debugging time; see
+[`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md)):
+
+- Spring Boot 4 split `spring-boot-autoconfigure` into per-technology modules — `flyway-core`
+  alone does not activate Flyway (T-7)
+- Spring Boot 4 ships **Jackson 3**: packages are `tools.jackson.*`, not
+  `com.fasterxml.jackson.*` (T-9)
+- Testcontainers 1.21.3 cannot negotiate Docker Engine API 1.55; 1.21.4 can (T-1)
+- A static `@Container` on a shared abstract base is stopped after the first subclass (T-10)
+- MySQL error 3819 (CHECK violated) is absent from Spring's data-integrity code list, so it
+  surfaces as `UncategorizedSQLException` (T-8)
+
+---
+
+## 18. What this document will become
+
+This file records the **baseline** plus the progress table above. Sections 1–16 are
+intentionally frozen as a historical record of the starting point.
 
 Live state is tracked in:
 

@@ -123,6 +123,13 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/auth/logout").authenticated()
 
+                        // --- Patients ---
+                        // Authentication only at this layer. Role is gated by @PreAuthorize on
+                        // the controller, and the access SCOPE (which patients a caller may see)
+                        // is enforced in PatientService — deliberately not here, so it applies
+                        // however the operation is reached rather than only via HTTP.
+                        .requestMatchers("/api/v1/patients", "/api/v1/patients/**").authenticated()
+
                         // --- Everything else, including not-yet-existing paths ---
                         .anyRequest().denyAll()
                 )

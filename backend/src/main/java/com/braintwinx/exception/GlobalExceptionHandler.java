@@ -113,6 +113,37 @@ public class GlobalExceptionHandler {
                 .body(ApiError.validation(CorrelationIdFilter.currentTraceId(), fieldErrors));
     }
 
+    /**
+     * A {@code @Validated} constraint on a request parameter or path variable failed.
+     *
+     * <p>Distinct from {@link MethodArgumentNotValidException}, which covers request bodies.
+     * Without this handler a violated {@code @Max} on a page-size parameter escapes as a 500,
+     * which misreports a client mistake as a server fault — and a 500 is exactly what an
+     * attacker probing parameter bounds wants to see.
+     *
+     * <p>The violation messages are not echoed: they can contain the rejected value.
+     */
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraintViolation(
+            jakarta.validation.ConstraintViolationException ex) {
+        List<ApiError.FieldError> fieldErrors = ex.getConstraintViolations().stream()
+                .map(violation -> new ApiError.FieldError(
+                        lastPathNode(violation.getPropertyPath().toString()),
+                        violation.getMessage()))
+                .sorted(Comparator.comparing(ApiError.FieldError::field))
+                .toList();
+
+        log.warn("Parameter constraint violation on {} field(s)", fieldErrors.size());
+        return ResponseEntity.badRequest()
+                .body(ApiError.validation(CorrelationIdFilter.currentTraceId(), fieldErrors));
+    }
+
+    /** Reduces a Bean Validation property path to just the parameter name. */
+    private static String lastPathNode(String propertyPath) {
+        int lastDot = propertyPath.lastIndexOf('.');
+        return lastDot >= 0 ? propertyPath.substring(lastDot + 1) : propertyPath;
+    }
+
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ApiError> handleHandlerValidation(HandlerMethodValidationException ex) {
         log.warn("Parameter validation failed: {} violation(s)", ex.getAllErrors().size());
