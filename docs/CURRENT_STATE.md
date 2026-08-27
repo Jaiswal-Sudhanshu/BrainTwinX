@@ -1,6 +1,6 @@
 # BrainTwinX — Current State
 
-**Audit date:** 2026-08-22 · **Progress updated:** 2026-08-25
+**Audit date:** 2026-08-22 · **Progress updated:** 2026-08-26
 **Audited by:** Engineering owner (initial repository audit)
 **Audit scope:** `C:\Users\jsudh\projects\BrainTwinx` and the surrounding host filesystem
 **Document status:** AUTHORITATIVE for the pre-implementation baseline
@@ -173,9 +173,10 @@ this point forward.
 There are currently **no vulnerabilities, because there is no attack surface.**
 
 This is a meaningful distinction. Every control listed in brief §25 and §54 is a
-*build* task, not a *remediation* task. They are enumerated with their mitigations in
-[`SECURITY.md`](./SECURITY.md) and
-[`system-design/08-SECURITY-DESIGN.md`](./system-design/08-SECURITY-DESIGN.md).
+*build* task, not a *remediation* task. They will be enumerated with their mitigations in
+`docs/SECURITY.md` and `docs/system-design/08-SECURITY-DESIGN.md` — **neither document
+exists yet; both are authored in Phase 14.** The controls already built and tested in
+Phases 3–4 are listed in [`TASKS.md`](./TASKS.md).
 
 No secrets were found committed, since nothing was committed.
 
@@ -191,7 +192,7 @@ No secrets were found committed, since nothing was committed.
 | R-4 | **Python 3.14 is very new.** Some ML/CV libraries may lag. | Local dev friction. | PyTorch 2.13.0 and NumPy 2.5.2 cp314 wheels verified present. Docker image pins the runtime so CI and production do not depend on host Python. |
 | R-5 | **Java 25 host vs. Spring Boot supported range.** | Build failure. | Compile with `--release 21` against a Spring Boot version whose Java support is verified by an actual build, not assumed. |
 | R-6 | **Maven runs from `Downloads`.** | Fragile, non-reproducible builds. | Commit the Maven Wrapper (`mvnw`) so the build is self-contained. |
-| R-7 | **MySQL not installed locally.** | Cannot run the app outside Docker. | Containerised MySQL is the supported local path; documented in `DEPLOYMENT.md` and `TROUBLESHOOTING.md`. |
+| R-7 | **MySQL not installed locally.** | Cannot run the app outside Docker. | Containerised MySQL is the supported local path; documented in `TROUBLESHOOTING.md`, with `DEPLOYMENT.md` to follow in Phase 15. |
 | R-8 | **Scope is very large** relative to a single delivery pass. | Partial features presented as complete. | Strict per-feature status tracking (`NOT_STARTED` → `VERIFIED`) in `TASKS.md`. No feature is called done before implementation *and* tests *and* integration. Brief §46. |
 | R-9 | **Patient data sensitivity.** | Privacy breach. | Data minimisation, public-safe identifiers, no PHI in URLs/logs/errors, audit logging. Brief §26. |
 
@@ -207,7 +208,7 @@ records verified progress against it, so the document stays useful without rewri
 | P1 Audit & scaffold | ✅ COMPLETE | 9 audit checks; `.gitignore` proven to exclude `.env`, PHI, weights |
 | P2 Architecture & database | ✅ COMPLETE | `mvn verify` — 45 tests; 11 tables; 14 safety invariants exercised |
 | P3 Authentication & RBAC | ✅ COMPLETE | `mvn verify` — 94 tests; deny-by-default proven on 8 paths |
-| P4 Patient management | ✅ COMPLETE | `mvn verify` — **146 tests** (72 unit + 74 integration), 0 failures, 0 errors |
+| P4 Patient management | ✅ COMPLETE | `mvn verify` — **146 tests** (72 unit + 74 integration), 0 failures, 0 errors; re-verified 2026-08-26 |
 | P5–P16 | ⬜ NOT STARTED | — |
 
 **Risks from §16 now closed:**
@@ -248,7 +249,7 @@ Live state is tracked in:
 - [`TASKS.md`](./TASKS.md) — per-feature status
 - [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) — sequencing
 - [`ASSUMPTIONS.md`](./ASSUMPTIONS.md) — decisions made under ambiguity
-- [`LIMITATIONS.md`](./LIMITATIONS.md) — what the system cannot do
+- `LIMITATIONS.md` — what the system cannot do *(not yet written; authored in Phase 16)*
 
 ---
 

@@ -385,3 +385,107 @@ public abstract class AbstractIntegrationTest {
 One container is then shared by every integration test in the JVM, which is also faster than a
 per-class restart. Cleanup is handled by the Testcontainers **Ryuk** sidecar at JVM exit, so
 nothing is leaked by not calling `stop()`.
+
+---
+
+## T-11 — Surefire XML reports a lower test count than the build does
+
+**Symptom.** Counting tests from the per-class XML in `target/surefire-reports/` disagrees with
+the number Surefire itself prints. Summing the `tests=` attribute across the three unit-test
+report files gives **71**, while the build's own summary line says:
+
+```
+[INFO] Tests run: 72, Failures: 0, Errors: 0, Skipped: 0
+```
+
+Nothing failed, nothing was skipped, and the build is green either way — so the discrepancy is
+easy to mistake for a stale report or an arithmetic slip in whatever is doing the counting.
+
+**Diagnosis.** The XML is internally inconsistent for any class that uses `@Nested`:
+
+```
+TEST-com.braintwinx.entity.StateMachineTest.xml
+   tests attribute:  tests="31"
+   actual <testcase> elements: 32     <-- 9 JobStatus + 3 Scan entity transitions + 20 ScanStatus
+```
+
+The `<testsuite tests="...">` attribute under-reports by one, while the `<testcase>` elements it
+contains are all present and correct. The two report files without `@Nested` classes
+(`JwtServiceTest`, `PatientServiceTest`) agree exactly — 25 and 15 — which localises the fault to
+nested-class aggregation rather than to the run itself. The console breakdown confirms the true
+figure: the outer container reports `Tests run: 0` and each nested class reports its own subtotal,
+summing to 32.
+
+**Consequence.** `72 unit + 74 integration = 146` is the correct total for Phase 4. A count derived
+from the `tests=` attribute yields 145 and is wrong.
+
+**Fix.** When verifying a test count, use one of these — never the `tests=` attribute:
+
+```bash
+# authoritative: Surefire's own aggregate
+grep -E "Tests run:.*Failures" build.log | tail -1
+
+# or count the testcase elements directly
+grep -c '<testcase ' target/surefire-reports/TEST-*.xml
+```
+
+The Failsafe side is unaffected: `failsafe-summary.xml` carries `<completed>74</completed>`, which
+matches its console total, because no integration-test class uses `@Nested`.
+
+---
+
+## T-12 — An incremental build hides compiler warnings
+
+**Symptom.** `mvnw verify` reports no warnings and BUILD SUCCESS. A later `mvnw clean verify` on
+the *same, unchanged* source tree reports warnings:
+
+```
+[WARNING] .../exception/ApiErrorCode.java:[25,30] PAYLOAD_TOO_LARGE in
+          org.springframework.http.HttpStatus has been deprecated
+```
+
+Nothing changed between the two runs, so the warnings look as though `clean` introduced them.
+
+**Diagnosis.** The incremental run never compiled anything:
+
+```
+[INFO] --- compiler:3.15.0:compile ---
+[INFO] Nothing to compile - all classes are up to date.
+```
+
+`maven-compiler-plugin` skips the whole compilation when `target/classes` is newer than the
+sources, so `javac` is never invoked and therefore emits nothing. **Silence from a skipped
+compile is not evidence of warning-free code** — it carries no information at all. Only a build
+that actually compiles can report on the sources.
+
+This is worth internalising because it also inverts the usual intuition: the *cheaper* build is
+the one that lies, and it does so by omission rather than by producing a wrong answer.
+
+**Fix / practice.**
+
+- Any claim about compiler warnings must come from a build that compiled. Verify with
+  `mvnw clean verify`, or confirm the log contains `Compiling N source files` rather than
+  `Nothing to compile`.
+- Treat `Nothing to compile` in a verification log as "not measured", never as "clean".
+
+```bash
+# is this log actually evidence about the sources?
+grep -E "Compiling [0-9]+ source files|Nothing to compile" build.log
+```
+
+**The warnings themselves.** RFC 9110 renamed two status codes, and Spring Framework 7 deprecated
+the old constants while keeping them as aliases:
+
+| Deprecated | Replacement | HTTP status |
+|---|---|---|
+| `HttpStatus.PAYLOAD_TOO_LARGE` | `HttpStatus.CONTENT_TOO_LARGE` | 413 |
+| `HttpStatus.UNPROCESSABLE_ENTITY` | `HttpStatus.UNPROCESSABLE_CONTENT` | 422 |
+
+The numeric statuses are identical, so switching is a pure rename with no behavioural change and
+no effect on any test that asserts on the status code. Confirm a replacement exists in the version
+you actually resolve before editing, rather than assuming:
+
+```bash
+jar=$(find ~/.m2/repository/org/springframework/spring-web -name "spring-web-*.jar" ! -name "*sources*")
+javap -cp "$jar" org.springframework.http.HttpStatus | grep -E "CONTENT_TOO_LARGE|UNPROCESSABLE_CONTENT"
+```

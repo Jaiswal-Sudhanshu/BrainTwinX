@@ -185,15 +185,15 @@ What it does **not** ship is trained weights or any accuracy figure. With weight
 absent, the AI service reports **NOT READY** and analysis endpoints return a typed
 error — they never fabricate a prediction.
 
-To supply models and data, see [`docs/DATASET_SETUP.md`](docs/DATASET_SETUP.md)
-*(written in Phase 7)*.
+To supply models and data, see `docs/DATASET_SETUP.md` *(not yet written — authored in
+Phase 7)*.
 
 ---
 
 ## Testing
 
 Test commands are documented per phase as suites are added. Strategy:
-[`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) *(Phase 13)*.
+`docs/TESTING_STRATEGY.md` *(not yet written — authored in Phase 13)*.
 
 ---
 
@@ -205,10 +205,11 @@ Test commands are documented per phase as suites are added. Strategy:
 | [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | Phased plan, dependencies, exit criteria |
 | [`docs/TASKS.md`](docs/TASKS.md) | Live per-feature status |
 | [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) | Decisions taken under ambiguity |
-| `docs/system-design/` | 16-part design package *(Phases 2–16)* |
-| `docs/ADR/` | Architecture decision records |
-| `docs/SECURITY.md` | Threat model and mitigations |
-| `docs/LIMITATIONS.md` | What the system cannot do |
+| `docs/system-design/` | 16-part design package *(4 of 16 written; Phases 2–16)* |
+| `docs/ADR/` | Architecture decision records *(7 written)* |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Diagnosed toolchain and build failures |
+| `docs/SECURITY.md` | Threat model and mitigations *(not yet written — Phase 14)* |
+| `docs/LIMITATIONS.md` | What the system cannot do *(not yet written — Phase 16)* |
 
 ---
 

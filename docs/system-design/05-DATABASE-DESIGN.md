@@ -159,8 +159,10 @@ Verified by `SchemaMigrationIT` against a real MySQL 8.4 container:
 
 - Flyway records V1 as applied and successful
 - All 11 expected tables exist
-- `ddl-auto=validate` agrees between all 12 entities and the migrated schema (proven simply by
-  the context loading)
+- `ddl-auto=validate` agrees between all 11 entities and the migrated schema (proven simply by
+  the context loading). The 11 `@Entity` classes map 1:1 onto the 11 tables; `BaseEntity` and
+  `MutableEntity` are `@MappedSuperclass`, so their columns land in each subclass's table
+  rather than tables of their own
 - `segmentation_results` has no dice/iou column
 - All three inference tables carry `is_synthetic`
 - A forecast alongside `INSUFFICIENT_HISTORY` is **rejected**

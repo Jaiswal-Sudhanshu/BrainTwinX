@@ -22,7 +22,7 @@ public enum ApiErrorCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "The request is invalid."),
     INVALID_FILE(HttpStatus.BAD_REQUEST, "The uploaded file is invalid."),
     UNSUPPORTED_MRI_FORMAT(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "The MRI format is not supported."),
-    FILE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded file exceeds the permitted size."),
+    FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "The uploaded file exceeds the permitted size."),
 
     // --- Authentication and authorisation ---
     /**
@@ -48,18 +48,18 @@ public enum ApiErrorCode {
     CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "The resource was modified concurrently. Retry the request."),
 
     // --- Analysis and AI ---
-    ANALYSIS_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "The analysis could not be completed."),
+    ANALYSIS_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "The analysis could not be completed."),
     AI_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "The analysis service is unavailable."),
     MODEL_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "No model is available to serve this request."),
     /**
      * Not an error in the pejorative sense: a legitimate, recorded outcome meaning the system
      * declined to estimate a trend rather than fabricating one (brief section 13).
      */
-    INSUFFICIENT_HISTORY(HttpStatus.UNPROCESSABLE_ENTITY,
+    INSUFFICIENT_HISTORY(HttpStatus.UNPROCESSABLE_CONTENT,
             "There is insufficient history to produce a trend estimate."),
 
     // --- Reports ---
-    REPORT_GENERATION_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "The report could not be generated."),
+    REPORT_GENERATION_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "The report could not be generated."),
 
     // --- Infrastructure ---
     STORAGE_FAILURE(HttpStatus.SERVICE_UNAVAILABLE, "Storage is currently unavailable."),

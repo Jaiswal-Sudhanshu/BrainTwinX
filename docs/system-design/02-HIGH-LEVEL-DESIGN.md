@@ -288,9 +288,10 @@ unrepresentable: a `FAILED` scan or job without a failure code is rejected by CH
 
 ## 9. Verification status
 
-Phase 2 is verified: `mvn verify` **BUILD SUCCESS** — 45 tests (32 unit + 13 integration
-against real MySQL 8.4), 0 failures, 0 errors.
+Phases 1–4 are verified. Latest: `mvn verify` **BUILD SUCCESS** — 146 tests (72 unit +
+74 integration against real MySQL 8.4), 0 failures, 0 errors.
 
-Flows in §2–§5 are **designed, not yet implemented** (Phases 3–11). The state machine in §6 and
-the schema-level guarantees referenced throughout **are** implemented and tested. Live status:
+The authentication flow in §2 **is** implemented and tested (Phase 3). The flows in §3–§5
+are **designed, not yet implemented** (Phases 5–11). The state machine in §6 and the
+schema-level guarantees referenced throughout **are** implemented and tested. Live status:
 [`TASKS.md`](../TASKS.md).

@@ -1,6 +1,6 @@
 # BrainTwinX — Task Tracking
 
-**Last updated:** 2026-08-22
+**Last updated:** 2026-08-27
 **Legend:** `[ ]` not started · `[-]` in progress · `[x]` completed · `[!]` blocked
 
 **Feature status ladder** (brief §46) — a feature is `VERIFIED` only after implementation,
@@ -74,9 +74,15 @@ against real MySQL 8.4), 0 failures, 0 errors. Exit criteria met.
 - [x] Spring Boot project (`pom.xml`) — Spring Boot 4.1.1, Java 21 target, no Lombok
 - [x] **Verified** Spring Boot ↔ Java 25 compatibility by running an actual build:
       `mvn test-compile` compiled 38 main + 3 test sources with `release 21` and **zero
-      warnings** on project sources
+      warnings** on project sources — *historical, scoped to the P2 source set of 38 files.*
+      Not a standing property: `ApiErrorCode`, added in P3, later introduced 4 deprecation
+      warnings, which went unnoticed because an incremental build skips compilation
+      entirely and so cannot report them (see the 2026-08-27 log entries and T-12). Fixed
+      2026-08-27; the current cold build is warning-free across all 63 sources.
 - [x] Flyway `V1__baseline_schema.sql` — 11 tables with PK/FK/UNIQUE/INDEX/NOT NULL/CHECK
-- [x] JPA entities (12) + base classes + 12 domain enums
+- [x] JPA entities (11, one per table) + 2 `@MappedSuperclass` base classes
+      (`BaseEntity`, `MutableEntity` — mapped into their subclasses' tables, not tables
+      themselves) + 12 domain enums
 - [x] Repositories (11)
 - [x] Scan status state machine defined in one authoritative place (`ScanStatus`)
 - [x] Job status state machine (`JobStatus`)
@@ -90,14 +96,15 @@ against real MySQL 8.4), 0 failures, 0 errors. Exit criteria met.
 - [x] ADR-003 Python AI service
 - [x] ADR-004 MySQL
 - [x] ADR-005 REST for backend↔AI communication
-- [x] `docs/TROUBLESHOOTING.md` — 7 entries, each with diagnosed root cause
+- [x] `docs/TROUBLESHOOTING.md` — 7 entries at the close of P2, each with a diagnosed root
+      cause (13 entries as of 2026-08-27, added as later phases hit new failures)
 
 ### Verified against real MySQL 8.4
 
 - [x] **`mvn verify` — BUILD SUCCESS**, 45 tests, 0 failures, 0 errors
 - [x] Flyway applies V1 from an empty schema and records it successful
 - [x] All 11 expected tables created
-- [x] Hibernate `ddl-auto=validate` **agrees** between all 12 entities and the migration
+- [x] Hibernate `ddl-auto=validate` **agrees** between all 11 entities and the migration
       (proven by the context loading at all)
 - [x] `segmentation_results` has **no** dice/iou column
 - [x] All three inference tables carry `is_synthetic`
@@ -440,7 +447,7 @@ that attempt the forbidden write and assert the specific constraint name.
 | B-3 | Trained forecasting weights | No longitudinal series | Owner supplies serial-scan data |
 | B-4 | Reported model accuracy metrics | No evaluation run possible | B-1/B-2/B-3 resolved |
 | B-5 | Live LLM explanations | No provider/API key configured | Owner supplies provider config |
-| ~~B-6~~ | ~~Schema verification (`mvn verify`)~~ — **RESOLVED**: `mysql:8.4` pulled on retry attempt 8 (Docker caches completed layers, so repeated attempts made incremental progress). | **Cannot pull the `mysql:8.4` Docker image.** 12 pull attempts failed, and the AWS ECR public mirror fails identically on a different CDN host with `httpReadSeeker: failed open: ... EOF` from Docker Hub's CDN. Docker itself works (`hello-world` runs; `testcontainers/ryuk:0.12.0` pulled successfully and its container was created), and the Testcontainers↔Docker connection defect was found and fixed. The only remaining obstacle is downloading the ~250 MB database image. | A successful `docker pull mysql:8.4` on a stable connection. Then `mvn verify` runs unchanged — no code change required. |
+| ~~B-6~~ | ~~Schema verification (`mvn verify`)~~ | **RESOLVED 2026-08-22.** Was: `docker pull mysql:8.4` failed 12 times with `httpReadSeeker: failed open: ... EOF` from Docker Hub's CDN, and the AWS ECR public mirror failed identically on a different CDN host. Docker itself was healthy throughout — `hello-world` ran and `testcontainers/ryuk:0.12.0` pulled — so the ~250 MB image download was the sole obstacle. A separate Testcontainers↔Docker defect was found and fixed alongside it (T-1). | Resolved by retrying the pull: it succeeded on attempt 8, because Docker caches completed layers, so repeated attempts made incremental progress. No code change was needed — `mvn verify` then ran unchanged. |
 
 These are **documented gaps, not silent omissions.** The corresponding interfaces,
 pipelines, and harnesses are still built and tested so that resolving each blocker is a
@@ -469,4 +476,12 @@ A record of what has actually been executed, so no status above rests on assumpt
 | 2026-08-22 | `mvn verify` (P2 complete) | **BUILD SUCCESS** — 45 tests, 0 failures |
 | 2026-08-24 | `mvn verify` (P3 complete) | **BUILD SUCCESS** — 94 tests, 0 failures |
 | 2026-08-25 | `mvn verify` (P4 complete) | **BUILD SUCCESS** — **146 tests** (72 unit + 74 integration), **0 failures, 0 errors** |
+| 2026-08-26 | `mvn verify` re-run from a clean session to confirm P4 | **BUILD SUCCESS** — **146 tests** (72 unit + 74 integration), **0 failures, 0 errors**, 1 min 28 s. Independently reproduces the 2026-08-25 result. **Compiler warnings not measured:** the build printed `Nothing to compile`, so javac never ran (T-12). |
+| 2026-08-26 | Entity count re-checked (`@Entity` with word boundary) | **11** entities, 1:1 with the 11 tables. The previously recorded "12" came from a loose grep matching `@EntityListeners` on `BaseEntity`. Corrected in this file and in `05-DATABASE-DESIGN.md`. |
+| 2026-08-26 | Unit-test count audited against `target/surefire-reports` | The per-class XML `tests=` attribute sums to 71 and **disagrees with the true count of 72**. `StateMachineTest.xml` declares `tests="31"` while containing 32 `<testcase>` elements (9 `JobStatus` + 3 `Scan entity transitions` + 20 `ScanStatus`). Surefire's own console aggregate reports 72. **72 is correct**; the XML attribute under-reports by one when `@Nested` classes are used — see TROUBLESHOOTING T-11. Trust the console total or count `<testcase>` elements, never the `tests=` attribute. |
+| 2026-08-27 | `mvn clean verify` — first genuinely **cold** build | **BUILD SUCCESS** — `target` deleted, **63 main sources recompiled** with `release 21`, **72 unit + 74 integration = 146 tests**, 0 failures, 0 errors, 0 skipped, 1 min 07 s. Confirms the 146 total independently of any cached artifact. |
+| 2026-08-27 | Compiler warnings, cold vs. incremental | The cold build reported **4 deprecation warnings** that every incremental build had hidden: an up-to-date build prints `Nothing to compile`, so javac never inspects the sources and its silence is **not** evidence of clean code. All 4 were in `ApiErrorCode` — `HttpStatus.PAYLOAD_TOO_LARGE` ×1 and `HttpStatus.UNPROCESSABLE_ENTITY` ×3. See T-12. |
+| 2026-08-27 | Deprecated `HttpStatus` constants replaced | `PAYLOAD_TOO_LARGE` → `CONTENT_TOO_LARGE` (both **413**), `UNPROCESSABLE_ENTITY` → `UNPROCESSABLE_CONTENT` (both **422**) — RFC 9110 renames, verified present in the resolved Spring Framework 7 jar with `javap` before editing. Numeric statuses unchanged, so no behaviour change and no test expectation altered. Confined to `ApiErrorCode.java`; `grep` confirmed no other source referenced either constant. |
+| 2026-08-27 | `mvn clean verify` after the constant rename | **BUILD SUCCESS** — 63 main + 7 test sources recompiled, **72 unit + 74 integration = 146 tests**, **0 failures, 0 errors, 0 skipped, 0 compiler warnings**, 1 min 04 s. Warning-free result is *measured*, not merely unreported: the log shows `Compiling 63 source files`, not `Nothing to compile`. Counts cross-checked by `<testcase>` elements (72 + 74) and `failsafe-summary.xml` (`completed 74`). |
+| 2026-08-27 | Coverage caveat on the rename | The 4 renamed codes (`FILE_TOO_LARGE`, `ANALYSIS_FAILED`, `INSUFFICIENT_HISTORY`, `REPORT_GENERATION_FAILED`) all serve P5+ features, so **no current test asserts a 413 or 422 response through them** — the rename is compile-verified, not behaviour-tested. P5 should assert `FILE_TOO_LARGE` → **413** explicitly rather than let it pass unexercised. |
 

@@ -134,7 +134,9 @@ The last two rows are the current state, not hypotheticals — see blockers B-1�
 |---|---|
 | P1 Audit & scaffold | ✅ Complete |
 | P2 Architecture & database | ✅ Complete — `mvn verify` green, 45 tests |
-| P3–P16 | ⬜ Not started |
+| P3 Authentication & authorisation | ✅ Complete — `mvn verify` green, 94 tests |
+| P4 Patient management | ✅ Complete — `mvn verify` green, 146 tests |
+| P5–P16 | ⬜ Not started |
 
 Nothing above is described as working unless a test demonstrates it. Live status:
 [`TASKS.md`](../TASKS.md).
