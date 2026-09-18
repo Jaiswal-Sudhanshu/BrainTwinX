@@ -44,4 +44,10 @@ public class ResourceNotFoundException extends ApiException {
         return new ResourceNotFoundException(ApiErrorCode.RESOURCE_NOT_FOUND,
                 "Analysis job not found: " + jobPublicId);
     }
+
+    public static ResourceNotFoundException growthPrediction(String patientCode) {
+        return new ResourceNotFoundException(ApiErrorCode.RESOURCE_NOT_FOUND,
+                "Growth prediction not found for patient: " + patientCode);
+    }
 }
+

@@ -180,4 +180,28 @@ public class AiServiceClient {
         String base64 = java.util.Base64.getEncoder().encodeToString(imageBytes);
         return segment(new AiSegmentationRequest(scanId, patientCode, base64));
     }
+
+    /**
+     * Invokes the internal AI service to perform LSTM longitudinal tumor growth forecasting.
+     *
+     * @param request forecast request payload containing patient observations
+     * @return {@link AiLongitudinalForecastResponse} forecasting output
+     */
+    public AiLongitudinalForecastResponse forecastGrowth(AiLongitudinalForecastRequest request) {
+        try {
+            return restClient.post()
+                    .uri("/internal/ai/v1/forecast")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(AiLongitudinalForecastResponse.class);
+        } catch (RestClientResponseException e) {
+            log.warn("AI service forecast call failed with status {}: {}", e.getStatusCode(), e.getMessage());
+            throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI forecasting failed: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.warn("AI service forecast call failed: {}", e.getMessage());
+            throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI inference service is unreachable", e);
+        }
+    }
 }
+

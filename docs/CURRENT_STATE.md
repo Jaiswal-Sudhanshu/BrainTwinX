@@ -213,7 +213,8 @@ records verified progress against it, so the document stays useful without rewri
 | P6 AI service foundation | ✅ COMPLETE | AI service: **7 pytest tests** passing; backend client: `mvn verify` — **201 tests** passing, 0 failures, 0 errors |
 | P7 CNN classification | ✅ COMPLETE | Spring Boot + AI Service verified; **14 pytest** + **201 backend tests** |
 | P8 U-Net segmentation | ✅ COMPLETE | Spring Boot + AI Service verified; **22 pytest** + **126 backend unit tests** |
-| P9–P16 | ⬜ NOT STARTED | — |
+| P9 Longitudinal / LSTM | ✅ COMPLETE | Spring Boot + AI Service verified; **29 pytest** + **136 backend unit tests** |
+| P10–P16 | ⬜ NOT STARTED | — |
 
 **Risks from §16 now closed:**
 

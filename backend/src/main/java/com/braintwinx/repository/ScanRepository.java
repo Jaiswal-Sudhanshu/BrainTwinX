@@ -38,6 +38,8 @@ public interface ScanRepository extends JpaRepository<Scan, Long> {
      */
     List<Scan> findByPatientAndStatusOrderByScanDateAsc(Patient patient, ScanStatus status);
 
+    List<Scan> findByPatientOrderByScanDateAsc(Patient patient);
+
     /** Duplicate-upload detection, matching the unique constraint on the same pair. */
     boolean existsByPatientAndContentSha256(Patient patient, String contentSha256);
 
