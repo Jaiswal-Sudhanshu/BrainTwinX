@@ -56,6 +56,11 @@ class ModelRegistry:
                 model = load_segmenter_weights(file_path)
                 self._models["segmenter"] = model
                 self._models["segmentation"] = model
+            elif model_key in ("forecaster", "longitudinal"):
+                from app.models.forecaster import load_forecaster_weights
+                model = load_forecaster_weights(file_path)
+                self._models["forecaster"] = model
+                self._models["longitudinal"] = model
             else:
                 checkpoint = torch.load(file_path, map_location="cpu", weights_only=True)
                 self._models[model_key] = checkpoint
@@ -88,6 +93,8 @@ class ModelRegistry:
     def get_model(self, model_key: str) -> Optional[Any]:
         if model_key in ("segmenter", "segmentation"):
             return self._models.get("segmenter") or self._models.get("segmentation")
+        if model_key in ("forecaster", "longitudinal"):
+            return self._models.get("forecaster") or self._models.get("longitudinal")
         return self._models.get(model_key)
 
 

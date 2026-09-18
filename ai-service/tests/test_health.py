@@ -30,9 +30,12 @@ def test_readiness_succeeds_when_all_weights_present(tmp_path, monkeypatch, clie
     weights_dir.mkdir()
 
     from app.models.classifier import BrainTumorCNN
+    from app.models.segmenter import BrainTumorUNet
+    from app.models.forecaster import TumorGrowthLSTM
+
     torch.save({"state_dict": BrainTumorCNN().state_dict(), "version": "1.0.0"}, weights_dir / "classifier_cnn_v1.pt")
-    for filename in ["segmentation_unet_v1.pt", "longitudinal_lstm_v1.pt"]:
-        torch.save({"state_dict": {}, "version": "1.0.0"}, weights_dir / filename)
+    torch.save({"state_dict": BrainTumorUNet().state_dict(), "version": "1.0.0"}, weights_dir / "segmentation_unet_v1.pt")
+    torch.save({"state_dict": TumorGrowthLSTM().state_dict(), "version": "1.0.0"}, weights_dir / "longitudinal_lstm_v1.pt")
 
     custom_registry = ModelRegistry(weights_dir=weights_dir)
     custom_registry.load_all()

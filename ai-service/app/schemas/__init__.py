@@ -4,9 +4,15 @@ from .inference import (
     ClassificationResponse,
     SegmentationRequest,
     SegmentationResponse,
-    LongitudinalRequest,
-    LongitudinalResponse,
+    ObservationPoint,
+    ForecastPoint,
+    LongitudinalForecastRequest,
+    LongitudinalForecastResponse,
 )
+
+# Aliases for backward compatibility
+LongitudinalRequest = LongitudinalForecastRequest
+LongitudinalResponse = LongitudinalForecastResponse
 
 __all__ = [
     "HealthResponse",
@@ -15,6 +21,11 @@ __all__ = [
     "ClassificationResponse",
     "SegmentationRequest",
     "SegmentationResponse",
+    "ObservationPoint",
+    "ForecastPoint",
+    "LongitudinalForecastRequest",
+    "LongitudinalForecastResponse",
     "LongitudinalRequest",
     "LongitudinalResponse",
 ]
+

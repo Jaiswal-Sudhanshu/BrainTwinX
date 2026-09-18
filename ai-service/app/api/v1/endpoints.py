@@ -5,7 +5,8 @@ from app.models.registry import model_registry
 from app.schemas.health import HealthResponse, ReadyResponse
 from app.schemas.inference import (
     ClassificationRequest, ClassificationResponse,
-    SegmentationRequest, SegmentationResponse
+    SegmentationRequest, SegmentationResponse,
+    LongitudinalForecastRequest, LongitudinalForecastResponse,
 )
 
 router = APIRouter()
@@ -73,3 +74,25 @@ def segment_tumor(request: SegmentationRequest):
     """
     from app.inference.segmentation import run_segmentation_inference
     return run_segmentation_inference(request)
+
+
+@router.post(
+    "/forecast",
+    response_model=LongitudinalForecastResponse,
+    dependencies=[Depends(verify_internal_api_key)],
+    tags=["Inference"]
+)
+@router.post(
+    "/growth-trend",
+    response_model=LongitudinalForecastResponse,
+    dependencies=[Depends(verify_internal_api_key)],
+    include_in_schema=False
+)
+def forecast_growth(request: LongitudinalForecastRequest):
+    """
+    Performs LSTM longitudinal tumor growth trajectory and trend estimation.
+    Output is strictly a MODEL-BASED TREND ESTIMATE.
+    """
+    from app.inference.forecasting import run_growth_forecast
+    return run_growth_forecast(request)
+

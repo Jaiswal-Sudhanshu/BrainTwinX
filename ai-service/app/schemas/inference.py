@@ -41,22 +41,34 @@ class SegmentationResponse(BaseModel):
 
 
 class ObservationPoint(BaseModel):
+    scanId: str
     scanDate: str
-    tumorAreaMm2: float
+    daysFromFirst: int
+    tumorAreaPx: int = Field(..., description="Tumor area in preprocessed image pixels")
 
 
-class LongitudinalRequest(BaseModel):
+class ForecastPoint(BaseModel):
+    horizonDays: int = Field(..., description="Future offset in days from latest scan")
+    projectedAreaPx: int = Field(..., description="Model-estimated tumor area in pixels")
+    projectedLowerPx: Optional[int] = None
+    projectedUpperPx: Optional[int] = None
+
+
+class LongitudinalForecastRequest(BaseModel):
     patientCode: str
     observations: List[ObservationPoint]
+    forecastHorizonsDays: List[int] = Field(default_factory=lambda: [30, 60, 90])
 
 
-class LongitudinalResponse(BaseModel):
+class LongitudinalForecastResponse(BaseModel):
     modelName: str
     modelVersion: str
-    insufficientHistory: bool
-    reason: Optional[str] = None
-    growthRatePerMonth: Optional[float] = None
-    estimatedDoublingTimeDays: Optional[float] = None
-    forecastDays: Optional[int] = None
-    projectedAreaMm2: Optional[float] = None
+    preprocessingVersion: str
+    trendDirection: str = Field(..., description="INCREASING, DECREASING, STABLE, or INDETERMINATE")
+    forecast: List[ForecastPoint]
+    disclaimer: str = Field(
+        default="MODEL-BASED TREND ESTIMATE. Not a clinical diagnosis or guarantee of future growth.",
+        description="Mandatory qualification disclaimer per brief §13 and §44",
+    )
     isSynthetic: bool = False
+
