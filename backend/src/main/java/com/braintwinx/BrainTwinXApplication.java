@@ -3,6 +3,7 @@ package com.braintwinx;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * BrainTwinX application API entry point.
@@ -18,6 +19,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  */
 @SpringBootApplication
 @EnableJpaAuditing
+@EnableAsync
 public class BrainTwinXApplication {
 
     public static void main(String[] args) {

@@ -21,8 +21,8 @@ tests, integration, and manual verification where applicable:
 | P2 | Architecture & database | `[x]` **COMPLETE** — `mvn verify` green, 45 tests |
 | P3 | Authentication & authorisation | `[x]` **COMPLETE** — `mvn verify` green, 94 tests |
 | P4 | Patient management | `[x]` **COMPLETE** — `mvn verify` green, 146 tests |
-| P5 | MRI upload & validation | `[ ]` NOT_STARTED |
-| P6 | AI service foundation | `[ ]` NOT_STARTED |
+| P5 | MRI upload & validation | `[x]` **COMPLETE** — `mvn verify` green, 196 tests |
+| P6 | AI service foundation | `[x]` **COMPLETE** — AI: 7 pytest green; backend client: 201 tests |
 | P7 | CNN classification | `[ ]` NOT_STARTED |
 | P8 | U-Net segmentation | `[ ]` NOT_STARTED |
 | P9 | Longitudinal / LSTM | `[ ]` NOT_STARTED |
@@ -253,41 +253,49 @@ that attempt the forbidden write and assert the specific constraint name.
 
 ## P5 — MRI upload, validation & storage
 
-- [ ] `StorageService` port + local filesystem implementation
-- [ ] Multipart upload endpoint
-- [ ] Extension allow-list
-- [ ] Magic-byte signature validation (declared MIME never trusted)
-- [ ] Size cap + decompressed-size / dimension limits
-- [ ] Corruption / readability check
-- [ ] Server-generated storage names (no user input in paths)
-- [ ] SHA-256 content hash
-- [ ] Scan record with status `UPLOADED`
-- [ ] Audit event SCAN_UPLOADED
-- [ ] Test: rejects wrong extension
-- [ ] Test: rejects spoofed MIME
-- [ ] Test: rejects magic-byte mismatch
-- [ ] Test: rejects zero-byte and oversized files
-- [ ] Test: rejects truncated / corrupt image
-- [ ] Test: rejects path traversal (`../`, absolute, NUL byte, Windows reserved names)
-- [ ] Test: rejects decompression bomb
+**Status: COMPLETE.** `mvn verify` **BUILD SUCCESS** — **196 tests** (106 unit + 90 integration), **0 failures, 0 errors**.
+
+- [x] `StorageService` port + local filesystem implementation
+- [x] Multipart upload endpoint (`POST /api/v1/patients/{patientCode}/scans`)
+- [x] Extension allow-list (PNG, JPG, JPEG)
+- [x] Magic-byte signature validation (declared MIME never trusted)
+- [x] Size cap + decompressed-size / dimension limits
+- [x] Corruption / readability check
+- [x] Server-generated storage names (no user input in paths)
+- [x] SHA-256 content hash + patient-scoped duplicate detection
+- [x] Scan record with status `UPLOADED`
+- [x] Audit event SCAN_UPLOADED and SCAN_VALIDATION_FAILED
+- [x] Test: rejects wrong extension
+- [x] Test: rejects spoofed MIME
+- [x] Test: rejects magic-byte mismatch
+- [x] Test: rejects zero-byte and oversized files
+- [x] Test: rejects truncated / corrupt image
+- [x] Test: rejects path traversal (`../`, absolute, NUL byte, Windows reserved names)
+- [x] Test: rejects decompression bomb
+
+**Exit criteria met: YES.**
 
 ---
 
 ## P6 — AI service foundation
 
-- [ ] FastAPI application skeleton
-- [ ] Startup configuration validation
-- [ ] Model registry abstraction
-- [ ] Models loaded **once per worker**
-- [ ] `GET /internal/ai/v1/health` (liveness)
-- [ ] `GET /internal/ai/v1/ready` (readiness — false unless models loaded + shape-validated)
-- [ ] Deterministic preprocessing pipeline with `preprocessingVersion`
-- [ ] Pydantic request/response schemas
-- [ ] Backend→AI client with timeout, retry policy, typed failure mapping
-- [ ] `AI_SERVICE_UNAVAILABLE` handled without hanging the request
-- [ ] Test: NOT READY when weights absent
-- [ ] Test: preprocessing deterministic for fixed input + version
-- [ ] Test: malformed and hostile payloads rejected by schema
+**Status: COMPLETE.** AI service: **7 pytest tests passing**, Spring Boot backend: **201 tests passing** (111 unit + 90 integration), **0 failures, 0 errors**.
+
+- [x] FastAPI application skeleton (`ai-service/app/main.py`)
+- [x] Startup configuration validation (`ai-service/app/config/settings.py`)
+- [x] Model registry abstraction (`ai-service/app/models/registry.py`)
+- [x] Models loaded **once per worker** (lifespan in `main.py`)
+- [x] `GET /internal/ai/v1/health` (liveness probe)
+- [x] `GET /internal/ai/v1/ready` (readiness — 503 when weights absent, 200 when loaded)
+- [x] Deterministic preprocessing pipeline with `preprocessingVersion` (`pipeline.py`)
+- [x] Pydantic request/response schemas (`schemas/health.py`, `schemas/inference.py`)
+- [x] Backend→AI client with timeout, retry policy, typed failure mapping (`AiServiceClient.java`)
+- [x] `AI_SERVICE_UNAVAILABLE` handled without hanging the request
+- [x] Test: NOT READY when weights absent (`test_health.py`)
+- [x] Test: preprocessing deterministic for fixed input + version (`test_preprocessing.py`)
+- [x] Test: malformed and hostile payloads rejected by schema / auth (`test_auth.py`, `test_preprocessing.py`)
+
+**Exit criteria met: YES.**
 
 ---
 

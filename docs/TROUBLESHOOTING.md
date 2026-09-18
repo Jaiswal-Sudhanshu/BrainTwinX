@@ -489,3 +489,33 @@ you actually resolve before editing, rather than assuming:
 jar=$(find ~/.m2/repository/org/springframework/spring-web -name "spring-web-*.jar" ! -name "*sources*")
 javap -cp "$jar" org.springframework.http.HttpStatus | grep -E "CONTENT_TOO_LARGE|UNPROCESSABLE_CONTENT"
 ```
+
+---
+
+## T-14 — Windows Application Control / Smart App Control blocks PyTorch DLLs
+
+**Symptom.** Importing PyTorch in Python on Windows fails with:
+`OSError: [WinError 4551] An Application Control policy has blocked this file. Error loading "...\torch\lib\torch_python.dll" or one of its dependencies.`
+
+**Root cause.** Windows Smart App Control or Application Control policy blocks newly-downloaded DLLs bearing the Mark-of-the-Web (Zone.Identifier alternate data stream).
+
+**Fix.** Recursively remove Zone.Identifier streams from the virtual environment:
+```powershell
+Get-ChildItem -Path ".\ai-service\.venv" -Recurse | Unblock-File
+```
+
+---
+
+## T-15 — Spring Boot 4: `No qualifying bean of type 'org.springframework.web.client.RestClient$Builder'`
+
+**Symptom.** Spring context startup fails with `UnsatisfiedDependencyException: No qualifying bean of type 'org.springframework.web.client.RestClient$Builder' available`.
+
+**Root cause.** Spring Boot 4 does not auto-configure a standalone `RestClient.Builder` bean by default unless explicitly provided.
+
+**Fix.** Have client services instantiate via `RestClient.builder()` in their primary `@Autowired` constructor rather than requiring an injected builder, while preserving the builder-accepting constructor for mock testing:
+```java
+@Autowired
+public AiServiceClient(AiClientProperties properties) {
+    this(properties, RestClient.builder(), true);
+}
+```

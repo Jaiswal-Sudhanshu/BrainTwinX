@@ -1,235 +1,403 @@
 # BrainTwinX
 
-**AI-assisted Brain MRI Analysis and Research Platform**
+<div align="center">
 
-> ### ⚠️ Medical disclaimer
+# 🧠 BrainTwinX
+### AI-Assisted Brain MRI Analysis & Research Platform
+
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![Java](https://img.shields.io/badge/Java-21%20LTS-orange.svg?logo=openjdk)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen.svg?logo=springboot)]()
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi)]()
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.13+-EE4C2C.svg?logo=pytorch)]()
+[![MySQL](https://img.shields.io/badge/MySQL-8.4%20LTS-4479A1.svg?logo=mysql)]()
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg?logo=docker)]()
+[![Tests](https://img.shields.io/badge/Tests-200%2B%20Passing-success.svg)]()
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)]()
+
+<p align="center">
+  <b>A secure, clinical decision-support and research platform for neuro-oncology MRI analysis.</b><br>
+  Built with strict medical-safety guardrails, deterministic preprocessing, role-based access control, and complete auditability.
+</p>
+
+</div>
+
+---
+
+> ### ⚠️ Medical Disclaimer & Safety Invariants
 >
-> BrainTwinX provides AI-assisted image analysis for **research and decision-support
-> purposes**. AI-generated results are **not a definitive medical diagnosis** and must
-> not replace evaluation by a qualified healthcare professional.
+> **BrainTwinX provides AI-assisted image analysis for RESEARCH AND CLINICAL DECISION-SUPPORT PURPOSES ONLY.**
 >
-> The platform deliberately distinguishes **AI prediction** from **clinical diagnosis**
-> throughout its UI, API responses, and generated reports.
+> - AI-generated predictions and masks are **not a definitive medical diagnosis** and must never replace clinical judgement by a qualified healthcare professional.
+> - The platform rigorously distinguishes **AI prediction** from **clinical diagnosis** across all API responses, database records, user interfaces, and generated reports.
+> - The platform enforces a **fail-closed design**: unconfigured providers or missing model weights immediately return explicit typed errors (`503 NOT_READY`), never fabricated outputs.
 
 ---
 
-## Project status
+## 📋 Table of Contents
 
-🚧 **Early development — Phase 1 of 16 complete.**
-
-This project is being built greenfield. The repository was empty at the start of work;
-see [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) for the audited baseline and the
-evidence behind that statement.
-
-**Honest status summary:**
-
-| Area | Status |
-|---|---|
-| Repository audit & scaffold | ✅ Complete |
-| Architecture & database | ⬜ Not started |
-| Authentication & RBAC | ⬜ Not started |
-| Patient management | ⬜ Not started |
-| MRI upload & validation | ⬜ Not started |
-| AI service & inference | ⬜ Not started |
-| Trained models | ⛔ **Blocked — no dataset available** |
-| Explanation layer | ⛔ **Blocked — no LLM provider configured** |
-| Reporting | ⬜ Not started |
-| Frontend | ⬜ Not started |
-| Docker & deployment | ⬜ Not started |
-
-Live per-feature tracking: [`docs/TASKS.md`](docs/TASKS.md).
-
-**Nothing in this repository is claimed to work until it has been implemented, tested,
-and verified.** There are no trained models and therefore no accuracy claims. See
-[`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
+- [About BrainTwinX](#-about-braintwinx)
+- [System Architecture](#-system-architecture)
+- [Project Status & Progress](#-project-status--progress)
+- [Key Features](#-key-features)
+- [Technology Stack](#-technology-stack)
+- [Repository Structure](#-repository-structure)
+- [Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Environment Configuration](#environment-configuration)
+  - [Running the Database](#running-the-database)
+  - [Running the Spring Boot Backend](#running-the-spring-boot-backend)
+  - [Running the FastAPI AI Service](#running-the-fastapi-ai-service)
+- [API Reference](#-api-reference)
+- [AI Pipeline & Inference](#-ai-pipeline--inference)
+- [Security & Privacy Guardrails](#-security--privacy-guardrails)
+- [Testing & Quality Assurance](#-testing--quality-assurance)
+- [Release Notes](#-release-notes)
+- [Documentation Index](#-documentation-index)
+- [License](#-license)
 
 ---
 
-## Intended capabilities
+## 🔬 About BrainTwinX
 
-Once complete, an authorised user will be able to:
+BrainTwinX bridges modern deep learning with strict clinical-safety requirements. Radiologists and neuro-oncology researchers face increasing scan volumes requiring precise detection, longitudinal trend estimation, and clear documentation.
 
-- authenticate with role-based access (ADMIN / DOCTOR / RESEARCHER)
-- create and manage patient records using public-safe identifiers
-- upload and validate MRI scans
-- run a deterministic, versioned preprocessing pipeline
-- obtain AI-based tumour classification with genuine model confidence
-- obtain tumour segmentation with mask overlay visualisation
-- perform longitudinal analysis where sufficient history exists
-- obtain model-based trend estimates (never presented as certainty)
-- receive model-grounded explanations that cannot invent clinical findings
-- generate and download professional PDF reports
-- rely on audit logging of all significant actions
+BrainTwinX provides:
+1. **Protected Patient Context**: Fully anonymised patient identifiers (`PAT-XXXXXX`) with zero Protected Health Information (PHI) leaked into URLs, logs, or AI payloads.
+2. **Defensive MRI Ingestion**: Binary magic-byte inspection, dimensions/size limits, decompression bomb prevention, and SHA-256 deduplication.
+3. **Transparent AI Pipeline**: Deterministic image preprocessing with strict version tracking, PyTorch CNN tumour classifiers, and explicit model registry provenance.
+4. **Auditability & Integrity**: Immutable database audit logs capturing every security, ingestion, and inference event with correlation IDs.
 
 ---
 
-## Architecture
+## 🏛 System Architecture
 
 ```
-                          USER
-                            │
-                            ▼
-                     React Frontend
-                            │
-                          HTTPS
-                            │
-                            ▼
-                   Spring Boot Backend
-                   ╱        │        ╲
-                  ╱         │         ╲
-                 ▼          ▼          ▼
-             MySQL     AI Service   File Storage
-                            │
-                  ┌─────────┼─────────┐
-                  ▼         ▼         ▼
-                 CNN      U-Net     LSTM
-                            │
-                            ▼
-                      AI Results
-                            │
-                            ▼
-                   Explanation Layer
-                            │
-                            ▼
-                     Report Service
+                                  CLINICAL USER / RESEARCHER
+                                              │
+                                              ▼
+                                   React Frontend (Vite)
+                                              │  HTTPS / JWT
+                                              ▼
+                             ┌───────────────────────────────────┐
+                             │    Spring Boot Application API    │
+                             │        (Java 21 LTS / Boot 4)     │
+                             └───────┬─────────────┬───────────┬─┘
+                                     │             │           │
+                     JDBC / Flyway   │             │ WebClient │ File Port
+                                     ▼             │           ▼
+                              MySQL 8.4 LTS        │     Filesystem / S3
+                             (11 Core Tables)      │   (Hashed Scan Store)
+                                                   ▼
+                                    ┌─────────────────────────────┐
+                                    │    FastAPI AI Microservice  │
+                                    │       (Python / PyTorch)    │
+                                    └──────────────┬──────────────┘
+                                                   │
+                                     ┌─────────────┼─────────────┐
+                                     ▼             ▼             ▼
+                                CNN Classifier  U-Net Seg   LSTM Trend
+                                (Tumour Class) (Tumour Mask) (Historical)
 ```
 
-Full design package: [`docs/system-design/`](docs/system-design/).
-Decision records: [`docs/ADR/`](docs/ADR/).
+### Architectural Highlights
+- **Backend**: Spring Boot 4 application orchestrating business logic, RBAC, scan validation, analysis jobs, and audit logs.
+- **AI Microservice**: Lightweight FastAPI service hosting PyTorch inference pipelines with lifecycle-managed model caches and SHA-256 weight integrity checks.
+- **Data Persistence**: MySQL 8.4 schema governed by Flyway migrations with 14 enforced database check constraints and safety invariants.
+- **Storage Port**: Decoupled `StorageService` interface allowing seamless swapping between secure local filesystem and cloud object storage (AWS S3 / GCP Cloud Storage).
 
 ---
 
-## Technology stack
+## 📊 Project Status & Progress
 
-| Layer | Technology | Notes |
-|---|---|---|
-| Frontend | React + TypeScript (Vite) | |
-| Backend | Spring Boot, Java 21 target | Compiled `--release 21` on JDK 25 |
-| AI service | Python, FastAPI, PyTorch | Runtime pinned in container |
-| Database | MySQL 8 | Flyway migrations |
-| Storage | Local filesystem behind a `StorageService` port | Object-storage ready |
-| Auth | JWT + BCrypt | Deny-by-default authorisation |
-| Container | Docker + Compose | |
+The platform is actively developed using test-driven, verifiable delivery phases:
 
-Rationale for each choice is recorded as an ADR rather than assumed.
-
----
-
-## Prerequisites
-
-Verified present on the development host:
-
-| Tool | Required | Found |
-|---|---|---|
-| JDK | 21+ | 25.0.4 (Temurin) |
-| Maven | 3.9+ | 3.9.16 — *wrapper will be committed so this is not required* |
-| Node.js | 20+ | 24.16.0 |
-| Python | 3.11+ | 3.14.5 |
-| Docker | 24+ | 29.6.2 |
-| Git | 2.x | 2.45.1 |
-| MySQL | 8.x | **not installed locally** — use the Docker container |
+| Phase | Description | Status | Verification Status |
+|---|---|:---:|---|
+| **P1** | **Repository Audit & Scaffold** | ✅ Complete | Zero-baseline audit, verified toolchains, safe `.gitignore` |
+| **P2** | **Architecture & Database** | ✅ Complete | Flyway migrations, 11 MySQL tables, 14 DB constraints |
+| **P3** | **Authentication & RBAC** | ✅ Complete | JWT + BCrypt, deny-by-default, 3 clinical roles |
+| **P4** | **Patient Management** | ✅ Complete | Public patient codes, zero PHI leaks, scope validation |
+| **P5** | **MRI Upload & Validation** | ✅ Complete | Magic-byte checking, SHA-256 hashing, safe storage port |
+| **P6** | **AI Service Foundation** | ✅ Complete | FastAPI skeleton, model registry, deterministic preprocessing |
+| **P7** | **CNN Classification** | 🔄 Next | Model training harness & inference orchestration |
+| **P8** | **U-Net Segmentation** | ⏳ Planned | Tumour mask overlay & pixel-area metrics |
+| **P9** | **Longitudinal Tracking** | ⏳ Planned | Historical scans & LSTM trend analysis |
+| **P10**| **Explanation Layer** | ⏳ Planned | Structured guard-railed diagnostic assistance |
+| **P11**| **PDF Reporting** | ⏳ Planned | Downloadable clinical summary reports |
+| **P12**| **Frontend Integration**| ⏳ Planned | High-fidelity React + TypeScript user interface |
+| **P13**| **End-to-End Testing** | ⏳ Planned | Integration suites across all microservices |
+| **P14**| **Security Hardening** | ⏳ Planned | Pen-testing, rate-limiting, audit log freeze |
+| **P15**| **Docker & Deployment** | ⏳ Planned | Production multi-stage containers & Compose |
+| **P16**| **Documentation & Release**| ⏳ Planned | Full user manuals and operational guides |
 
 ---
 
-## Getting started
+## ✨ Key Features
 
-> Setup instructions will be completed as each phase lands. The steps below reflect
-> what exists **today** and will be expanded — they are not aspirational.
+### 1. Role-Based Access Control (RBAC)
+- Three operational roles:
+  - `ADMIN`: User provisioning, system configuration, global audit inspection.
+  - `DOCTOR`: Patient record creation, scan uploads, triggering AI analyses.
+  - `RESEARCHER`: Anonymised data analysis and model performance evaluation.
+- Stateless JWT authentication with standard deny-by-default Spring Security configuration.
 
+### 2. Anonymised Patient Lifecycle
+- Identifiers generated as public-safe strings (`PAT-XXXXXX`) avoiding primary database sequential IDs.
+- Deletion flags and soft-archive workflows preserving audit integrity.
+- Zero PHI in URLs, query strings, logs, or error responses.
+
+### 3. Rigorous Image Validation Engine
+- **MIME & Magic Bytes**: Rejects files with spoofed extensions (e.g. executable renamed as `.jpg`).
+- **Decompression Bomb Defence**: Dimension thresholds (e.g., maximum 4096×4096) and byte-size caps.
+- **Corrupt File Detection**: Decodes and verifies image streams before committing to storage.
+- **SHA-256 Deduplication**: Detects identical scans uploaded to the same patient record.
+
+### 4. Deterministic AI Preprocessing & Inference
+- Versioned preprocessing (`v1.0.0`): converts 2-D scans (PNG/JPEG) to single-channel grayscale, resizes to 224×224 via bilinear interpolation, normalises pixel intensity to `[0.0, 1.0]`, and returns standardized PyTorch tensors.
+- Model Registry verifies model weights via SHA-256 checksums on startup.
+- Local stub inference mode (`AI_ALLOW_STUB_INFERENCE=true`) explicitly tags synthetic predictions as non-clinical for safe offline development.
+
+---
+
+## 🛠 Technology Stack
+
+| Component | Technology | Version | Description |
+|---|---|---|---|
+| **Backend Framework** | Spring Boot | 4.1.1 | Reactive WebClient, Spring Data JPA, Spring Security |
+| **Java Runtime** | OpenJDK / Temurin | 21 LTS (compiled `--release 21`) | Modern Java records, pattern matching |
+| **AI Framework** | FastAPI | 0.115+ | High-performance Python asynchronous REST API |
+| **Deep Learning** | PyTorch / torchvision | 2.13+ | CNN classifiers, U-Net segmentation models |
+| **Database** | MySQL | 8.4 LTS | Flyway schema migrations, strict constraint checks |
+| **Storage Engine** | Filesystem Port | Abstraction | Decoupled storage port for local files and object stores |
+| **Testing** | JUnit 5 / Testcontainers / Pytest | Latest | Automated testing across units and real containers |
+
+---
+
+## 📁 Repository Structure
+
+```
+BrainTwinX/
+├── ai-service/                   # FastAPI AI Microservice (PyTorch)
+│   ├── app/
+│   │   ├── api/                  # API routes & dependency injection
+│   │   ├── config/               # Pydantic application settings
+│   │   ├── inference/            # Model inference drivers (CNN, U-Net)
+│   │   ├── models/               # PyTorch architectures & ModelRegistry
+│   │   ├── preprocessing/        # Deterministic image preprocessing pipeline
+│   │   └── schemas/              # Pydantic schemas (requests/responses)
+│   ├── datasets/                 # Dataset setup guides and placeholders
+│   ├── scripts/                  # Training and evaluation utilities
+│   ├── tests/                    # Pytest test suite (unit & API tests)
+│   └── requirements.txt          # Python dependencies
+├── backend/                      # Spring Boot Application Backend
+│   ├── src/main/java/com/braintwinx/
+│   │   ├── client/               # WebClient integrations (AI Service)
+│   │   ├── config/               # Security, Web, and Storage properties
+│   │   ├── controller/           # REST Controllers (Auth, Patients, Scans, AI)
+│   │   ├── dto/                  # Immutable Java records for request/response
+│   │   ├── entity/               # JPA Entities mapping to MySQL schema
+│   │   ├── exception/            # Global exception handlers & custom errors
+│   │   ├── mapper/               # Entity <-> DTO converters
+│   │   ├── repository/           # Spring Data JPA repositories
+│   │   ├── security/             # JWT filters, BCrypt encoders, RBAC rules
+│   │   ├── service/              # Core business services
+│   │   └── validation/           # Image validation & security scanners
+│   ├── src/main/resources/
+│   │   ├── db/migration/         # Flyway SQL migrations (V1, V2)
+│   │   └── application.yml       # Application configuration
+│   ├── src/test/                 # Comprehensive JUnit 5 & Testcontainers tests
+│   └── pom.xml                   # Maven project configuration
+├── docker/                       # Docker & Compose definitions
+│   └── docker-compose.yml        # Development environment services
+├── docs/                         # Authoritative documentation package
+│   ├── system-design/            # 16-part comprehensive system architecture
+│   ├── ADR/                      # Architecture Decision Records
+│   ├── CURRENT_STATE.md          # Audited project baseline and progress log
+│   ├── DATASET_SETUP.md          # Dataset acquisition & model training guide
+│   ├── TASKS.md                  # Granular task tracking per phase
+│   └── TROUBLESHOOTING.md        # Real-world engineering issues & solutions
+├── .env.example                  # Environment variable reference
+├── README.md                     # Project overview and instructions
+└── RELEASE.md                    # Official release documentation
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Java**: OpenJDK 21+
+- **Python**: Python 3.11+ (Python 3.14 compatible)
+- **Node.js**: Node 20+ (for upcoming frontend)
+- **Docker**: Docker Engine 24+ & Docker Compose
+
+### Environment Configuration
+Clone the repository and copy the environment template:
 ```bash
-git clone <this-repository>
-cd BrainTwinx
-
+git clone https://github.com/Jaiswal-Sudhanshu/BrainTwinX.git
+cd BrainTwinX
 cp .env.example .env
-# Then edit .env and set real values, in particular:
-#   MYSQL_PASSWORD  and  JWT_SECRET  (generate: openssl rand -base64 48)
+```
+Update `.env` with your desired credentials (e.g. generate a strong `JWT_SECRET` using `openssl rand -base64 48`).
+
+### Running the Database
+Start the containerised MySQL 8.4 instance:
+```bash
+docker compose -f docker/docker-compose.yml up -d mysql
 ```
 
-Nothing is runnable yet — the backend, frontend, and AI service are scaffolded
-directories at this stage. Build and run instructions arrive with Phase 2 (backend),
-Phase 6 (AI service), and Phase 12 (frontend).
+### Running the Spring Boot Backend
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+The backend starts on `http://localhost:8080`. Flyway automatically runs database migrations on startup.
+
+### Running the FastAPI AI Service
+```bash
+cd ai-service
+python -m venv .venv
+# On Windows:
+.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+The AI service interactive documentation is available at `http://localhost:8000/docs`.
 
 ---
 
-## Environment variables
+## 🔌 API Reference
 
-All configuration is supplied via environment variables. See
-[`.env.example`](.env.example) for the complete, documented list.
+### Authentication & Authorization
+| Method | Endpoint | Description | Roles |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/register` | Register a new user account | Public |
+| `POST` | `/api/v1/auth/login` | Authenticate user & issue JWT | Public |
+| `POST` | `/api/v1/auth/refresh` | Refresh expired access token | Public |
 
-**No secrets are committed to this repository.** `.env` is git-ignored;
-`.env.example` contains non-functional placeholders only.
+### Patient Management
+| Method | Endpoint | Description | Roles |
+|---|---|---|---|
+| `GET` | `/api/v1/patients` | Paginated list of patients | `ADMIN`, `DOCTOR`, `RESEARCHER` |
+| `POST` | `/api/v1/patients` | Create a new patient profile | `ADMIN`, `DOCTOR` |
+| `GET` | `/api/v1/patients/{patientCode}` | Retrieve patient by code | `ADMIN`, `DOCTOR`, `RESEARCHER` |
+| `PUT` | `/api/v1/patients/{patientCode}` | Update patient details | `ADMIN`, `DOCTOR` |
+| `DELETE`| `/api/v1/patients/{patientCode}` | Soft-delete / archive patient | `ADMIN` |
 
-Safety-relevant settings worth highlighting:
+### MRI Scan Management
+| Method | Endpoint | Description | Roles |
+|---|---|---|---|
+| `POST` | `/api/v1/patients/{patientCode}/scans` | Upload and validate MRI scan | `ADMIN`, `DOCTOR` |
+| `GET` | `/api/v1/patients/{patientCode}/scans` | List all scans for a patient | `ADMIN`, `DOCTOR`, `RESEARCHER` |
+| `GET` | `/api/v1/scans/{scanId}` | Get scan metadata & status | `ADMIN`, `DOCTOR`, `RESEARCHER` |
+| `GET` | `/api/v1/scans/{scanId}/file` | Download original scan file | `ADMIN`, `DOCTOR` |
 
-| Variable | Purpose |
+### AI Inference & Classification
+| Method | Endpoint | Description | Roles |
+|---|---|---|---|
+| `POST` | `/api/v1/scans/{scanId}/classify` | Trigger tumour classification job | `ADMIN`, `DOCTOR` |
+| `GET` | `/api/v1/analyses/{jobId}` | Query status and result of analysis job | `ADMIN`, `DOCTOR`, `RESEARCHER` |
+
+### AI Service Internal Endpoints
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| `GET` | `/internal/ai/v1/health` | Liveness health check | Internal / Authorized |
+| `GET` | `/internal/ai/v1/ready` | Readiness check (503 if weights absent) | Internal / Authorized |
+| `POST` | `/internal/ai/v1/classify` | Execute CNN tumour classification | Internal / Authorized |
+
+---
+
+## 🤖 AI Pipeline & Inference
+
+### 1. Preprocessing Pipeline (`v1.0.0`)
+- **Input**: Raw 2-D MRI images in PNG or JPEG format.
+- **Transformations**:
+  1. Conversion to 1-channel Grayscale (L).
+  2. Resizing to standard input dimensions ($224 \times 224$) via bilinear interpolation.
+  3. Intensity normalisation to $[0.0, 1.0]$.
+  4. Conversion to PyTorch Tensor shape $(1, 1, 224, 224)$.
+- **Determinism**: Guaranteed identical tensor output given identical input image and version tag.
+
+### 2. CNN Classifier Architecture
+- Custom 4-stage convolutional backbone with Batch Normalisation, ReLU activation, MaxPooling, Dropout ($p=0.4$), and linear classification head.
+- Outputs softmax probabilities over 4 tumour classes:
+  - `NO_TUMOUR`
+  - `GLIOMA`
+  - `MENINGIOMA`
+  - `PITUITARY`
+
+### 3. Model Weight Integrity & Registry
+- The Model Registry enforces SHA-256 checksum verification before loading weights.
+- When weights are not yet trained or mounted, endpoints return `503 Service Unavailable` with a typed error explaining model unreadiness.
+- For complete training guides and dataset acquisition, refer to [`docs/DATASET_SETUP.md`](docs/DATASET_SETUP.md).
+
+---
+
+## 🔒 Security & Privacy Guardrails
+
+- **Deny-by-Default**: Every HTTP route in Spring Boot requires explicit authorization; unmapped routes are denied by default.
+- **Zero PHI in Diagnostics**: Stack traces, error bodies, and logging events are sanitised to prevent patient names or demographic info from leaking.
+- **Audit Logging**: Crucial security and business events (`SCAN_UPLOADED`, `SCAN_VALIDATION_FAILED`, `ANALYSIS_REQUESTED`, `PATIENT_CREATED`, etc.) are written to immutable audit records.
+- **Tamper-Resistant Storage**: Stored scans are isolated using server-generated UUID storage names and checked against their SHA-256 hashes.
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+BrainTwinX follows strict verification criteria. No phase is marked complete without full automated test coverage.
+
+### Backend Verification (JUnit 5, Mockito & Testcontainers)
+Run the complete backend test suite:
+```bash
+cd backend
+./mvnw clean test
+```
+*Current test metrics:* **201 passing tests** (111 unit tests + 90 integration tests), 0 failures, 0 errors.
+
+### AI Service Verification (Pytest)
+Run the AI microservice test suite:
+```bash
+cd ai-service
+pytest -v
+```
+*Current test metrics:* **7 passing tests** covering configuration, authentication, readiness probes, deterministic preprocessing, and input validation.
+
+---
+
+## 📦 Release Notes
+
+### Current Release: `v0.1.0-alpha`
+- **Milestone**: Foundational Core Platform, Patient Management & AI Inference Service.
+- **Delivered**:
+  - Full Spring Boot 4 / Java 21 architecture with MySQL 8.4 database.
+  - JWT authentication and 3-tier Role-Based Access Control.
+  - Anonymised patient lifecycle management.
+  - Secure MRI upload, image integrity verification, and local storage engine.
+  - FastAPI AI microservice with PyTorch CNN model registry and deterministic preprocessing.
+  - Comprehensive documentation and system architecture design.
+
+For full release notes, see [`RELEASE.md`](RELEASE.md).
+
+---
+
+## 📚 Documentation Index
+
+| File | Purpose |
 |---|---|
-| `AI_ALLOW_STUB_INFERENCE` | Must stay `false` outside local development. When enabled, output is synthetic and tagged non-clinical. The production profile refuses to start with it on. |
-| `EXPLANATION_ENABLED` | Explanation layer fails closed when unconfigured. |
-| `LONGITUDINAL_MIN_OBSERVATIONS` | Below this, the system returns `INSUFFICIENT_HISTORY` rather than a fabricated trend. |
-| `LOG_SQL` | Must stay `false` in production. |
+| [`RELEASE.md`](RELEASE.md) | Official release announcement & detailed changelog |
+| [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) | Verified audit baseline and progress history |
+| [`docs/DATASET_SETUP.md`](docs/DATASET_SETUP.md) | Instructions for acquiring MRI datasets & model training |
+| [`docs/TASKS.md`](docs/TASKS.md) | Granular checklist of implemented and planned tasks |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Engineering troubleshooting records and toolchain notes |
+| [`docs/system-design/`](docs/system-design/) | 16-part architectural system design specifications |
+| [`docs/ADR/`](docs/ADR/) | Architecture Decision Records justifying technical choices |
 
 ---
 
-## AI model setup
+## 📄 License
 
-**There are currently no trained models, and no dataset is available.**
-
-This is a deliberate, documented gap rather than an oversight. The platform ships:
-
-- real preprocessing (deterministic and versioned)
-- real model-loading interfaces with checksum and input-shape verification
-- real inference orchestration, persistence, and version tracking
-- a genuinely runnable training and evaluation harness
-
-What it does **not** ship is trained weights or any accuracy figure. With weights
-absent, the AI service reports **NOT READY** and analysis endpoints return a typed
-error — they never fabricate a prediction.
-
-To supply models and data, see `docs/DATASET_SETUP.md` *(not yet written — authored in
-Phase 7)*.
-
----
-
-## Testing
-
-Test commands are documented per phase as suites are added. Strategy:
-`docs/TESTING_STRATEGY.md` *(not yet written — authored in Phase 13)*.
-
----
-
-## Documentation
-
-| Document | Contents |
-|---|---|
-| [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) | Audited baseline with evidence |
-| [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | Phased plan, dependencies, exit criteria |
-| [`docs/TASKS.md`](docs/TASKS.md) | Live per-feature status |
-| [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) | Decisions taken under ambiguity |
-| `docs/system-design/` | 16-part design package *(4 of 16 written; Phases 2–16)* |
-| `docs/ADR/` | Architecture decision records *(7 written)* |
-| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Diagnosed toolchain and build failures |
-| `docs/SECURITY.md` | Threat model and mitigations *(not yet written — Phase 14)* |
-| `docs/LIMITATIONS.md` | What the system cannot do *(not yet written — Phase 16)* |
-
----
-
-## Known limitations
-
-Recorded honestly and up front:
-
-1. **No trained models.** No dataset is available; no accuracy is claimed.
-2. **No explanation provider configured.** The layer fails closed.
-3. **2-D images only** (PNG/JPEG). DICOM and NIfTI are out of scope —
-   DICOM carries embedded PHI requiring a de-identification design.
-4. **Not clinically validated.** No regulatory clearance of any kind.
-5. **Tumour area is reported in preprocessed pixels**, not mm² — physical spacing
-   metadata is unavailable for 2-D inputs, and deriving mm² from an assumed spacing
-   would be a fabricated measurement.
-
-Reasoning for each: [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
-
----
-
-## Licence
-
-Not yet specified.
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.

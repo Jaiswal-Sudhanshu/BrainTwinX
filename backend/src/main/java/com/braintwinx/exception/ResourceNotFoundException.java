@@ -29,4 +29,14 @@ public class ResourceNotFoundException extends ApiException {
         return new ResourceNotFoundException(ApiErrorCode.REPORT_NOT_FOUND,
                 "Report not found or not accessible: " + publicId);
     }
+
+    public static ResourceNotFoundException prediction(String scanPublicId) {
+        return new ResourceNotFoundException(ApiErrorCode.RESOURCE_NOT_FOUND,
+                "Prediction not found for scan: " + scanPublicId);
+    }
+
+    public static ResourceNotFoundException job(String jobPublicId) {
+        return new ResourceNotFoundException(ApiErrorCode.RESOURCE_NOT_FOUND,
+                "Analysis job not found: " + jobPublicId);
+    }
 }

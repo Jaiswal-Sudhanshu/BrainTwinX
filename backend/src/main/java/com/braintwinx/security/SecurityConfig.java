@@ -38,7 +38,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * that do not exist yet, is denied.
  */
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({
+        JwtProperties.class,
+        com.braintwinx.config.StorageProperties.class,
+        com.braintwinx.config.AiClientProperties.class
+})
 @EnableMethodSecurity            // enables @PreAuthorize for per-endpoint rules
 public class SecurityConfig {
 
@@ -129,6 +133,9 @@ public class SecurityConfig {
                         // is enforced in PatientService — deliberately not here, so it applies
                         // however the operation is reached rather than only via HTTP.
                         .requestMatchers("/api/v1/patients", "/api/v1/patients/**").authenticated()
+
+                        // --- Scans ---
+                        .requestMatchers("/api/v1/scans", "/api/v1/scans/**").authenticated()
 
                         // --- Everything else, including not-yet-existing paths ---
                         .anyRequest().denyAll()
