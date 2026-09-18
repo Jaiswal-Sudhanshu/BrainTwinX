@@ -28,9 +28,15 @@ class SegmentationResponse(BaseModel):
     modelName: str
     modelVersion: str
     preprocessingVersion: str
-    maskBase64: str
-    tumorAreaPixels: int
-    tumorAreaMm2: Optional[float] = None
+    tumorDetected: bool
+    tumorAreaPx: Optional[int] = Field(None, description="Tumor area in preprocessed image pixels")
+    maskWidth: Optional[int] = None
+    maskHeight: Optional[int] = None
+    bboxX: Optional[int] = None
+    bboxY: Optional[int] = None
+    bboxWidth: Optional[int] = None
+    bboxHeight: Optional[int] = None
+    maskBase64: Optional[str] = Field(None, description="Base64-encoded PNG binary mask (224x224)")
     isSynthetic: bool = False
 
 

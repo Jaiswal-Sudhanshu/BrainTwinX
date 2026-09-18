@@ -8,12 +8,16 @@ from app.schemas.inference import ClassificationRequest, ClassificationResponse
 pipeline = PreprocessingPipeline()
 
 
+from app.config.settings import settings
+
 def run_classification_inference(request: ClassificationRequest) -> ClassificationResponse:
     """
     Executes CNN classification on a brain MRI slice.
     """
     model = model_registry.get_model("classifier")
-    if model is None or not isinstance(model, BrainTumorCNN):
+    is_stub_allowed = getattr(settings, "ALLOW_STUB_INFERENCE", False)
+
+    if (model is None or not isinstance(model, BrainTumorCNN)) and not is_stub_allowed:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Tumor classifier model is not ready or weights missing"
@@ -34,6 +38,23 @@ def run_classification_inference(request: ClassificationRequest) -> Classificati
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Image preprocessing failed: {e}"
         ) from e
+
+    if model is None or not isinstance(model, BrainTumorCNN):
+        # Development stub mode: explicitly tagged synthetic and non-clinical
+        return ClassificationResponse(
+            modelName="BrainTumorCNN-Stub",
+            modelVersion="1.0.0-stub",
+            preprocessingVersion=preprocessed.preprocessing_version,
+            tumorType="no_tumor",
+            confidence=0.50,
+            probabilities={
+                "no_tumor": 0.50,
+                "glioma": 0.20,
+                "meningioma": 0.20,
+                "pituitary": 0.10
+            },
+            isSynthetic=True
+        )
 
     predicted_class, confidence, probabilities = model.predict_probabilities(preprocessed.tensor)
 

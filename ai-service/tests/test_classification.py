@@ -102,3 +102,35 @@ def test_predict_endpoint_succeeds_when_model_loaded(client, monkeypatch):
     assert len(data["probabilities"]) == 4
     assert pytest.approx(sum(data["probabilities"].values()), abs=1e-4) == 1.0
     assert data["isSynthetic"] is False
+
+
+def test_stub_inference_is_off_by_default(client):
+    from app.config.settings import settings
+    assert settings.ALLOW_STUB_INFERENCE is False
+
+    req = ClassificationRequest(
+        scanId="scan-stub-test",
+        patientCode="PT-STUB",
+        imageBase64=create_test_image_base64()
+    )
+    # When weights missing and stub is OFF (default), fails closed with 503
+    response = client.post("/internal/ai/v1/predict", json=req.model_dump())
+    assert response.status_code == 503
+
+
+def test_stub_inference_when_explicitly_enabled(client, monkeypatch):
+    from app.config.settings import settings
+    monkeypatch.setattr(settings, "ALLOW_STUB_INFERENCE", True)
+
+    req = ClassificationRequest(
+        scanId="scan-stub-test",
+        patientCode="PT-STUB",
+        imageBase64=create_test_image_base64()
+    )
+    response = client.post("/internal/ai/v1/predict", json=req.model_dump())
+    assert response.status_code == 200
+    data = response.json()
+    assert data["isSynthetic"] is True
+    assert "Stub" in data["modelName"]
+    assert 0.0 <= data["confidence"] <= 1.0
+

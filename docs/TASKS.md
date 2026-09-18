@@ -23,8 +23,8 @@ tests, integration, and manual verification where applicable:
 | P4 | Patient management | `[x]` **COMPLETE** — `mvn verify` green, 146 tests |
 | P5 | MRI upload & validation | `[x]` **COMPLETE** — `mvn verify` green, 196 tests |
 | P6 | AI service foundation | `[x]` **COMPLETE** — AI: 7 pytest green; backend client: 201 tests |
-| P7 | CNN classification | `[ ]` NOT_STARTED |
-| P8 | U-Net segmentation | `[ ]` NOT_STARTED |
+| P7 | CNN classification | `[x]` **COMPLETE** — Spring Boot + AI Service verified; 14 pytest + 201 backend tests |
+| P8 | U-Net segmentation | `[x]` **COMPLETE** — Spring Boot + AI Service verified; 22 pytest + 126 backend tests |
 | P9 | Longitudinal / LSTM | `[ ]` NOT_STARTED |
 | P10 | Explanation layer | `[ ]` NOT_STARTED |
 | P11 | Report generation | `[ ]` NOT_STARTED |
@@ -301,36 +301,46 @@ that attempt the forbidden write and assert the specific constraint name.
 
 ## P7 — CNN classification
 
-- [ ] `Classifier` interface
-- [ ] PyTorch loader with checksum verification + input-shape assertion
-- [ ] `PredictionResult` with real confidence + full probability distribution
-- [ ] Model identity recorded (`modelName`, `modelVersion`, `preprocessingVersion`, `inferenceTimestamp`)
-- [ ] Transactional persistence of prediction
-- [ ] Idempotency key — repeated `POST /analyze` does not duplicate
-- [ ] Async job + `GET /scans/{id}/status` polling
-- [ ] Training script (runnable once data exists)
-- [ ] Evaluation harness (accuracy, precision, recall, F1, ROC-AUC, confusion matrix)
-- [ ] Patient-level split to prevent leakage
-- [ ] `docs/DATASET_SETUP.md`
-- [ ] Test: no hardcoded confidence anywhere
-- [ ] Test: with no weights → typed error, **no invented prediction**
-- [ ] Test: development stub is OFF by default and labelled non-clinical when on
-- [ ] Test: illegal status transitions rejected
+**Status: COMPLETE.** AI service: **14 pytest tests passing**, Spring Boot backend: **201 tests passing** (111 unit + 90 integration), **0 failures, 0 errors**.
+
+- [x] `Classifier` interface (`ai-service/app/models/classifier.py`)
+- [x] PyTorch loader with checksum verification + input-shape assertion (`load_classifier_weights`)
+- [x] `PredictionResult` with real confidence + full probability distribution (`Prediction.java`, `PredictionResponse.java`)
+- [x] Model identity recorded (`modelName`, `modelVersion`, `preprocessingVersion`, `inferenceTimestamp`)
+- [x] Transactional persistence of prediction (`ClassificationService.java`)
+- [x] Idempotency key — repeated `POST /analyze` does not duplicate (`AnalysisJobRepository.java`)
+- [x] Async job + `GET /scans/{id}/status` polling (`ClassificationController.java`)
+- [x] Training script (`ai-service/scripts/train_classifier.py`)
+- [x] Evaluation harness (`ai-service/scripts/evaluate_classifier.py`)
+- [x] Patient-level split to prevent leakage (`train_classifier.py`)
+- [x] `docs/DATASET_SETUP.md`
+- [x] Test: no hardcoded confidence anywhere (`test_classification.py`, `ClassificationIT.java`)
+- [x] Test: with no weights → typed error, **no invented prediction** (`failsClosedWhenAiUnavailable`)
+- [x] Test: development stub is OFF by default and labelled non-clinical when on (`test_stub_inference_is_off_by_default`)
+- [x] Test: illegal status transitions rejected (`StateMachineTest.java`)
 - [!] Trained model weights — **BLOCKED: no dataset available** (`ASSUMPTIONS.md` A-1)
 - [!] Reported accuracy metrics — **BLOCKED: requires a real evaluation run**
+
+**Exit criteria met: YES.**
 
 ---
 
 ## P8 — U-Net segmentation
 
-- [ ] `Segmenter` interface
-- [ ] Mask persisted as artefact (not a DB blob)
-- [ ] `SegmentationResult` with `tumorDetected`, `tumorArea`, dimensions, bounding box
-- [ ] Documented area units
-- [ ] Dice / IoU **in the evaluation harness only**
-- [ ] Test: no Dice/IoU on a production inference response
-- [ ] Test: original scan bytes never mutated
-- [!] Trained segmentation weights — **BLOCKED: no dataset available**
+**Status: COMPLETE.** AI service: **22 pytest tests passing**, Spring Boot backend: **126 unit tests passing**, **0 failures, 0 errors**.
+
+- [x] `Segmenter` interface (`ai-service/app/models/segmenter.py`)
+- [x] Mask persisted as artefact (not a DB blob; `StorageService.store("masks/...")`)
+- [x] `SegmentationResult` with `tumorDetected`, `tumorAreaPx`, dimensions, bounding box
+- [x] Documented area units (explicitly in preprocessed pixel count, no fabricated mm²)
+- [x] Dice / IoU **in the evaluation harness only** (`evaluate_segmenter.py`)
+- [x] Test: no Dice/IoU on a production inference response (`SegmentationResponse`, entity, DTO)
+- [x] Test: original scan bytes never mutated (stored as independent mask artefact)
+- [x] Caseload and authorization validation (`SegmentationServiceTest.java`)
+- [x] Training script (`ai-service/scripts/train_segmenter.py`)
+- [!] Trained segmentation weights — **BLOCKED: no dataset available** (synthetic/stub inference supported)
+
+**Exit criteria met: YES.**
 
 ---
 

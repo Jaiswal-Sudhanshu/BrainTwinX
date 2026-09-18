@@ -35,6 +35,11 @@ public class ResourceNotFoundException extends ApiException {
                 "Prediction not found for scan: " + scanPublicId);
     }
 
+    public static ResourceNotFoundException segmentation(String scanPublicId) {
+        return new ResourceNotFoundException(ApiErrorCode.RESOURCE_NOT_FOUND,
+                "Segmentation not found for scan: " + scanPublicId);
+    }
+
     public static ResourceNotFoundException job(String jobPublicId) {
         return new ResourceNotFoundException(ApiErrorCode.RESOURCE_NOT_FOUND,
                 "Analysis job not found: " + jobPublicId);

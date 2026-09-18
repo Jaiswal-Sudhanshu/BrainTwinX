@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # If empty, internal requests are rejected in non-test modes.
     API_KEY: str = ""
 
+    # Stub inference: development only, disabled by default.
+    # Production profiles fail closed when weights are missing.
+    ALLOW_STUB_INFERENCE: bool = False
+
     # Preprocessing contract
     PREPROCESSING_VERSION: str = "1.0.0"
     TARGET_IMAGE_SIZE: int = 224

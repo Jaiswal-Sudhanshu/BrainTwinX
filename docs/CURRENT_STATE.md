@@ -211,7 +211,9 @@ records verified progress against it, so the document stays useful without rewri
 | P4 Patient management | ✅ COMPLETE | `mvn verify` — **146 tests** (72 unit + 74 integration), 0 failures, 0 errors; re-verified 2026-08-26 |
 | P5 MRI upload & storage | ✅ COMPLETE | `mvn verify` — **196 tests** (106 unit + 90 integration), 0 failures, 0 errors; hostile-input defence verified |
 | P6 AI service foundation | ✅ COMPLETE | AI service: **7 pytest tests** passing; backend client: `mvn verify` — **201 tests** passing, 0 failures, 0 errors |
-| P7–P16 | ⬜ NOT STARTED | — |
+| P7 CNN classification | ✅ COMPLETE | Spring Boot + AI Service verified; **14 pytest** + **201 backend tests** |
+| P8 U-Net segmentation | ✅ COMPLETE | Spring Boot + AI Service verified; **22 pytest** + **126 backend unit tests** |
+| P9–P16 | ⬜ NOT STARTED | — |
 
 **Risks from §16 now closed:**
 

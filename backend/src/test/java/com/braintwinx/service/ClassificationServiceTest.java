@@ -342,7 +342,19 @@ class ClassificationServiceTest {
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {
-        Field f = target.getClass().getDeclaredField(fieldName);
+        Class<?> clazz = target.getClass();
+        Field f = null;
+        while (clazz != null) {
+            try {
+                f = clazz.getDeclaredField(fieldName);
+                break;
+            } catch (NoSuchFieldException e) {
+                clazz = clazz.getSuperclass();
+            }
+        }
+        if (f == null) {
+            throw new NoSuchFieldException(fieldName);
+        }
         f.setAccessible(true);
         f.set(target, value);
     }

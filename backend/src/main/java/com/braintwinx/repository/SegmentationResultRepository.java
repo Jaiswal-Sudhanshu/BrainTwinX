@@ -2,21 +2,22 @@ package com.braintwinx.repository;
 
 import com.braintwinx.entity.Scan;
 import com.braintwinx.entity.SegmentationResult;
+import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
-/**
- * Persistence for {@link SegmentationResult}.
- */
+@Repository
 public interface SegmentationResultRepository extends JpaRepository<SegmentationResult, Long> {
 
     Optional<SegmentationResult> findByPublicId(String publicId);
 
-    /** Latest segmentation for a scan, with its model version fetched for presentation. */
-    @EntityGraph(attributePaths = "modelVersion")
     Optional<SegmentationResult> findFirstByScanOrderByCreatedAtDesc(Scan scan);
 
-    /** Safety assertion support: see {@link PredictionRepository#countBySyntheticTrue()}. */
-    long countBySyntheticTrue();
+    List<SegmentationResult> findByScanOrderByCreatedAtDesc(Scan scan);
+
+    @Query("SELECT s FROM SegmentationResult s JOIN FETCH s.modelVersion WHERE s.scan = :scan ORDER BY s.createdAt DESC LIMIT 1")
+    Optional<SegmentationResult> findLatestWithModelVersion(@Param("scan") Scan scan);
 }

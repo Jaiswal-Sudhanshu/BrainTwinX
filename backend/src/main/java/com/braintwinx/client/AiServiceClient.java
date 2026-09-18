@@ -149,4 +149,35 @@ public class AiServiceClient {
         String base64 = java.util.Base64.getEncoder().encodeToString(imageBytes);
         return classify(new AiClassificationRequest(scanId, patientCode, base64));
     }
+
+    /**
+     * Invokes the internal AI service to perform U-Net segmentation on a brain MRI slice.
+     *
+     * @param request segmentation request payload
+     * @return {@link AiSegmentationResponse} segmentation output
+     */
+    public AiSegmentationResponse segment(AiSegmentationRequest request) {
+        try {
+            return restClient.post()
+                    .uri("/internal/ai/v1/segment")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(AiSegmentationResponse.class);
+        } catch (RestClientResponseException e) {
+            log.warn("AI service segment call failed with status {}: {}", e.getStatusCode(), e.getMessage());
+            throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI segmentation failed: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.warn("AI service segment call failed: {}", e.getMessage());
+            throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI inference service is unreachable", e);
+        }
+    }
+
+    /**
+     * Helper to segment an image from raw bytes by Base64-encoding it.
+     */
+    public AiSegmentationResponse segment(String scanId, String patientCode, byte[] imageBytes) {
+        String base64 = java.util.Base64.getEncoder().encodeToString(imageBytes);
+        return segment(new AiSegmentationRequest(scanId, patientCode, base64));
+    }
 }

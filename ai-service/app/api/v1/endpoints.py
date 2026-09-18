@@ -3,7 +3,10 @@ from app.api.deps import verify_internal_api_key
 from app.config.settings import settings
 from app.models.registry import model_registry
 from app.schemas.health import HealthResponse, ReadyResponse
-from app.schemas.inference import ClassificationRequest, ClassificationResponse
+from app.schemas.inference import (
+    ClassificationRequest, ClassificationResponse,
+    SegmentationRequest, SegmentationResponse
+)
 
 router = APIRouter()
 
@@ -42,6 +45,12 @@ def readiness_check(response: Response):
     dependencies=[Depends(verify_internal_api_key)],
     tags=["Inference"]
 )
+@router.post(
+    "/classify",
+    response_model=ClassificationResponse,
+    dependencies=[Depends(verify_internal_api_key)],
+    include_in_schema=False
+)
 def predict_tumor(request: ClassificationRequest):
     """
     Classifies a brain MRI slice into one of 4 categories:
@@ -49,3 +58,18 @@ def predict_tumor(request: ClassificationRequest):
     """
     from app.inference.classification import run_classification_inference
     return run_classification_inference(request)
+
+
+@router.post(
+    "/segment",
+    response_model=SegmentationResponse,
+    dependencies=[Depends(verify_internal_api_key)],
+    tags=["Inference"]
+)
+def segment_tumor(request: SegmentationRequest):
+    """
+    Performs U-Net tumor segmentation on a brain MRI slice.
+    Returns binary mask, detected status, pixel area, and bounding box.
+    """
+    from app.inference.segmentation import run_segmentation_inference
+    return run_segmentation_inference(request)

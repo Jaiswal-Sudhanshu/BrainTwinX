@@ -51,6 +51,11 @@ class ModelRegistry:
                 from app.models.classifier import load_classifier_weights
                 model = load_classifier_weights(file_path)
                 self._models[model_key] = model
+            elif model_key in ("segmenter", "segmentation"):
+                from app.models.segmenter import load_segmenter_weights
+                model = load_segmenter_weights(file_path)
+                self._models["segmenter"] = model
+                self._models["segmentation"] = model
             else:
                 checkpoint = torch.load(file_path, map_location="cpu", weights_only=True)
                 self._models[model_key] = checkpoint
@@ -81,6 +86,8 @@ class ModelRegistry:
         return "; ".join(self._unready_reasons) if self._unready_reasons else "MODELS_NOT_INITIALIZED"
 
     def get_model(self, model_key: str) -> Optional[Any]:
+        if model_key in ("segmenter", "segmentation"):
+            return self._models.get("segmenter") or self._models.get("segmentation")
         return self._models.get(model_key)
 
 
