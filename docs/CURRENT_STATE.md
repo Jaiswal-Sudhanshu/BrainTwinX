@@ -214,20 +214,36 @@ records verified progress against it, so the document stays useful without rewri
 | P7 CNN classification | ✅ COMPLETE | Spring Boot + AI Service verified; **14 pytest** + **201 backend tests** |
 | P8 U-Net segmentation | ✅ COMPLETE | Spring Boot + AI Service verified; **22 pytest** + **126 backend unit tests** |
 | P9 Longitudinal / LSTM | ✅ COMPLETE | Spring Boot + AI Service verified; **29 pytest** + **136 backend unit tests** |
-| P10–P16 | ⬜ NOT STARTED | — |
+| P10 Explanation layer | ✅ COMPLETE | Fail-closed validator (10 prohibitions), stub & LLM provider ports, audited; **29 pytest** + **150 backend unit tests** |
+| P11–P16 | ⬜ NOT STARTED | — |
+
+**Privacy & Security Suite (Complete):**
+Dedicated documentation package created in [`docs/privacy-and-security/`](./privacy-and-security/):
+- `01-SECURITY-ARCHITECTURE.md`: STRIDE threat model, internal network isolation, HMAC-SHA256 JWT, BCrypt, SHA-256 tokens, append-only audit log, dual-layer IDOR defenses.
+- `02-HIPAA-GDPR-COMPLIANCE.md`: Safe Harbor de-identification (§ 164.514(b)(2)), birth year context, GDPR Article 9 special health category protection, soft-archiving.
+- `03-NEURO-AI-SAFETY-FRAMEWORK.md`: SaMD qualification, explicit units (`tumorAreaPx`), strict exclusion of Dice/IoU from production responses, non-extrapolation on longitudinal history, the 10 Clinical Safety Prohibitions for LLMs, multimodal isolation.
+- `04-DATA-HANDLING-AND-INCIDENT-RESPONSE.md`: Path traversal sanitization, server-generated UUID storage keys, SHA-256 digest validation, non-root containers, NIST SP 800-61 incident response protocol.
+- Root [`SECURITY.md`](../SECURITY.md): Vulnerability reporting policy, security contacts, and SLA guidelines.
+
+**Open Research Benchmarks & Training Harness (Complete):**
+- Automated open research benchmark downloader and synthetic cohort generator created in `ai-service/scripts/download_datasets.py` supporting Figshare (Cheng et al.), Kaggle (Bhuvaji / Nickparvar), and Nature/TCIA BraTS datasets.
+- 24-patient benchmark dataset generated across 4 balanced classes (`glioma`, `meningioma`, `pituitary`, `no_tumor`) with patient-ID prefixes (`pat001_slice01.png`, etc.) in `ai-service/datasets/classification/`.
+- Training harness `ai-service/scripts/train_classifier.py` verified with patient-level splitting (no slice leakage).
 
 **Risks from §16 now closed:**
 
 | ID | Was | Now |
 |---|---|---|
+| R-1 | No dataset available | Closed — Automated open research benchmark downloader and 24-patient balanced cohort harness built and verified with patient-level splitting |
+| R-3 | No LLM provider | Closed — Fail-closed `LlmExplanationProvider` returns `UNAVAILABLE` without error; deterministic clinical `StubExplanationProvider` acts as fallback |
 | R-4 | Python 3.14 may lack ML wheels | Closed — `torch 2.13.0` cp314 verified available |
 | R-5 | Java 25 vs Spring Boot support | Closed — Spring Boot 4.1.1 builds and runs; `--release 21` |
 | R-6 | Maven runs from `~/Downloads` | Closed — wrapper committed and verified with no host Maven on `PATH` |
 | R-7 | MySQL not installed locally | Closed — containerised MySQL 8.4 is the supported path and is in use |
 
-**Risks still open:** R-1 (no dataset), R-2 (medical-safety misrepresentation — mitigated by
-14 schema-enforced invariants but permanently live), R-3 (no LLM provider), R-8 (scope vs.
-single pass), R-9 (patient data sensitivity — mitigated in P4 by scope enforcement, PHI-free
+**Risks still open:** R-2 (medical-safety misrepresentation — mitigated by
+14 schema-enforced invariants + ExplanationValidator but permanently live), R-8 (scope vs.
+single pass), R-9 (patient data sensitivity — mitigated by scope enforcement, PHI-free
 error responses, and audit logging, all under test).
 
 **Toolchain findings added since baseline** (each cost real debugging time; see

@@ -60,6 +60,8 @@ public class AuditService {
             "attemptCount",
             "previousRole",      // for USER_ROLE_CHANGED
             "newRole",
+            "provider",          // explanation provider
+            "explanationStatus", // INCLUDED, UNAVAILABLE, REJECTED
             "isSynthetic");      // so stub-derived results are visible in the trail
 
     private static final int MAX_VALUE_LENGTH = 200;

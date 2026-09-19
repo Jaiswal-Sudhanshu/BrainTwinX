@@ -65,7 +65,10 @@ def test_checksum_mismatch_aborts_weight_load(tmp_path):
     assert isinstance(loaded, BrainTumorCNN)
 
 
-def test_predict_endpoint_returns_503_when_model_unready(client):
+def test_predict_endpoint_returns_503_when_model_unready(client, monkeypatch):
+    from app.models.registry import model_registry
+    monkeypatch.setattr(model_registry, "get_model", lambda key: None)
+
     req = ClassificationRequest(
         scanId="scan-123",
         patientCode="PT-1",
@@ -104,9 +107,11 @@ def test_predict_endpoint_succeeds_when_model_loaded(client, monkeypatch):
     assert data["isSynthetic"] is False
 
 
-def test_stub_inference_is_off_by_default(client):
+def test_stub_inference_is_off_by_default(client, monkeypatch):
     from app.config.settings import settings
+    from app.models.registry import model_registry
     assert settings.ALLOW_STUB_INFERENCE is False
+    monkeypatch.setattr(model_registry, "get_model", lambda key: None)
 
     req = ClassificationRequest(
         scanId="scan-stub-test",
@@ -120,7 +125,9 @@ def test_stub_inference_is_off_by_default(client):
 
 def test_stub_inference_when_explicitly_enabled(client, monkeypatch):
     from app.config.settings import settings
+    from app.models.registry import model_registry
     monkeypatch.setattr(settings, "ALLOW_STUB_INFERENCE", True)
+    monkeypatch.setattr(model_registry, "get_model", lambda key: None)
 
     req = ClassificationRequest(
         scanId="scan-stub-test",

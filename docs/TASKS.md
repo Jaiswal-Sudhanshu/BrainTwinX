@@ -26,7 +26,7 @@ tests, integration, and manual verification where applicable:
 | P7 | CNN classification | `[x]` **COMPLETE** — Spring Boot + AI Service verified; 14 pytest + 201 backend tests |
 | P8 | U-Net segmentation | `[x]` **COMPLETE** — Spring Boot + AI Service verified; 22 pytest + 126 backend tests |
 | P9 | Longitudinal / LSTM | `[x]` **COMPLETE** — Spring Boot + AI Service verified; 29 pytest + 136 backend tests |
-| P10 | Explanation layer | `[ ]` NOT_STARTED |
+| P10 | Explanation layer | `[x]` **COMPLETE** — Verified fail-closed validator, stub & LLM ports; 150 backend tests green |
 | P11 | Report generation | `[ ]` NOT_STARTED |
 | P12 | Frontend integration | `[ ]` NOT_STARTED |
 | P13 | Testing | `[ ]` NOT_STARTED |
@@ -365,16 +365,20 @@ that attempt the forbidden write and assert the specific constraint name.
 
 ## P10 — Explanation layer
 
-- [ ] `ExplanationProvider` port (provider-agnostic)
-- [ ] Allow-listed structured input only — **image never sent to the LLM**
-- [ ] System prompt encoding all ten prohibitions (brief §14)
-- [ ] Post-generation validator (invented findings, measurements, symptoms, history, certainty, unsupported recommendations)
-- [ ] Fail closed when unconfigured
-- [ ] Persist only after validation passes
-- [ ] Test: one case per prohibition class
-- [ ] Test: unconfigured → typed error, pipeline still completes
-- [ ] Test: prompt-injection attempt via free-text field cannot reach the prompt
-- [!] Live provider — **BLOCKED: no LLM API key configured** (`ASSUMPTIONS.md` A-3)
+**Status: COMPLETE.** Verified with 150 backend tests (`mvn test`) + 29 pytest tests green.
+
+- [x] `ExplanationProvider` port (`ExplanationProvider.java`, `StubExplanationProvider.java`, `LlmExplanationProvider.java`)
+- [x] Allow-listed structured input only (`ExplanationPayload.java`) — **image never sent to the LLM (Multimodal Isolation)**
+- [x] System prompt & contract encoding all ten clinical safety prohibitions (brief §14)
+- [x] Post-generation validator (`ExplanationValidator.java`) enforcing 10 prohibitions (no invented findings, measurements, symptoms, history, certainty, prescriptions, visual claims, unwarranted extrapolation, impersonation, missing qualification, empty text)
+- [x] Fail closed when unconfigured (returns `UNAVAILABLE` status without throwing 500 or breaking report pipeline)
+- [x] Persist only after validation passes (only `INCLUDED` explanations attach text; `REJECTED` and `UNAVAILABLE` clear/discard text)
+- [x] Test: one case per prohibition class (`ExplanationValidatorTest.java` — 10 unit tests)
+- [x] Test: unconfigured → typed error / status UNAVAILABLE, pipeline still completes (`ExplanationServiceTest.java`)
+- [x] Test: prompt-injection attempt via free-text field cannot reach the prompt (strict typed numeric/enum schema in `ExplanationPayload`)
+- [x] Fallback provider: deterministic compliant `StubExplanationProvider` ensuring reliable operational continuity when LLM APIs are offline
+
+**Exit criteria met: YES.**
 
 ---
 

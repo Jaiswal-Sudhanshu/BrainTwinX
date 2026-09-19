@@ -35,6 +35,10 @@ public enum AuditAction {
     REPORT_ACCESSED,
     REPORT_GENERATION_FAILED,
 
+    // --- Explanations ---
+    EXPLANATION_GENERATED,
+    EXPLANATION_REJECTED,
+
     // --- Administration ---
     USER_CREATED,
     USER_ROLE_CHANGED,

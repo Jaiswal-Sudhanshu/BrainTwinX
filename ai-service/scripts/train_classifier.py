@@ -47,8 +47,8 @@ class BrainMRIDataset(Dataset):
         with open(path, "rb") as f:
             raw_bytes = f.read()
 
-        tensor = self.pipeline.preprocess_slice(raw_bytes)
-        return tensor.squeeze(0), label
+        output = self.pipeline.preprocess_image_bytes(raw_bytes)
+        return output.tensor.squeeze(0), label
 
 
 def patient_level_split(

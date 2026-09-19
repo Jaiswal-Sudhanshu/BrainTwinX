@@ -28,8 +28,14 @@ class PreprocessingPipeline:
     3. Normalization with fixed bounds.
     """
 
-    def __init__(self, target_size: int = settings.TARGET_IMAGE_SIZE, version: str = settings.PREPROCESSING_VERSION):
-        self.target_size = (target_size, target_size)
+    def __init__(self, target_size=settings.TARGET_IMAGE_SIZE, version: str = settings.PREPROCESSING_VERSION):
+        if isinstance(target_size, (tuple, list)):
+            if len(target_size) == 2:
+                self.target_size = (int(target_size[0]), int(target_size[1]))
+            else:
+                self.target_size = (int(target_size[0]), int(target_size[0]))
+        else:
+            self.target_size = (int(target_size), int(target_size))
         self.version = version
 
     def preprocess_image_bytes(self, image_bytes: bytes) -> PreprocessedOutput:

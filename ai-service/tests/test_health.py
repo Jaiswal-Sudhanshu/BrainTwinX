@@ -12,8 +12,12 @@ def test_liveness_endpoint_returns_200(client):
     assert "timestamp" in data
 
 
-def test_readiness_fails_closed_when_weights_absent(client):
-    # Standard state: no weights exist
+def test_readiness_fails_closed_when_weights_absent(tmp_path, monkeypatch, client):
+    # Isolated state: no weights exist in tmp_path
+    empty_registry = ModelRegistry(weights_dir=tmp_path / "empty_weights")
+    empty_registry.load_all()
+    monkeypatch.setattr("app.api.v1.endpoints.model_registry", empty_registry)
+
     response = client.get("/internal/ai/v1/ready")
     assert response.status_code == 503
     data = response.json()
