@@ -120,11 +120,11 @@ The platform is actively developed using test-driven, verifiable delivery phases
 | **P4** | **Patient Management** | ✅ Complete | Public patient codes, zero PHI leaks, scope validation |
 | **P5** | **MRI Upload & Validation** | ✅ Complete | Magic-byte checking, SHA-256 hashing, safe storage port |
 | **P6** | **AI Service Foundation** | ✅ Complete | FastAPI skeleton, model registry, deterministic preprocessing |
-| **P7** | **CNN Classification** | 🔄 Next | Model training harness & inference orchestration |
-| **P8** | **U-Net Segmentation** | ⏳ Planned | Tumour mask overlay & pixel-area metrics |
-| **P9** | **Longitudinal Tracking** | ⏳ Planned | Historical scans & LSTM trend analysis |
-| **P10**| **Explanation Layer** | ⏳ Planned | Structured guard-railed diagnostic assistance |
-| **P11**| **PDF Reporting** | ⏳ Planned | Downloadable clinical summary reports |
+| **P7** | **CNN Classification** | ✅ Complete | BrainTumorCNN (4 classes), patient-level split training, audit trail |
+| **P8** | **U-Net Segmentation** | ✅ Complete | BrainTumorUNet, binary mask generation, RLE encoding, `tumorAreaPx` metric |
+| **P9** | **Longitudinal Tracking** | ✅ Complete | Historical scans, LSTM growth dynamics, `INSUFFICIENT_HISTORY` policy |
+| **P10**| **Explanation Layer** | ✅ Complete | 10 Clinical Safety Prohibitions validator, multimodal isolation, fail-closed |
+| **P11**| **PDF Reporting** | 🔄 Next | Downloadable clinical summary reports with provenance |
 | **P12**| **Frontend Integration**| ⏳ Planned | High-fidelity React + TypeScript user interface |
 | **P13**| **End-to-End Testing** | ⏳ Planned | Integration suites across all microservices |
 | **P14**| **Security Hardening** | ⏳ Planned | Pen-testing, rate-limiting, audit log freeze |
