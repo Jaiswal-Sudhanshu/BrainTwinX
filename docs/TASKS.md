@@ -27,7 +27,7 @@ tests, integration, and manual verification where applicable:
 | P8 | U-Net segmentation | `[x]` **COMPLETE** — Spring Boot + AI Service verified; 22 pytest + 126 backend tests |
 | P9 | Longitudinal / LSTM | `[x]` **COMPLETE** — Spring Boot + AI Service verified; 29 pytest + 136 backend tests |
 | P10 | Explanation layer | `[x]` **COMPLETE** — Verified fail-closed validator, stub & LLM ports; 150 backend tests green |
-| P11 | Report generation | `[ ]` NOT_STARTED |
+| P11 | Report generation | `[x]` **COMPLETE** — Verified PDFBox 3 renderer, 11 sections, SHA-256 integrity, IDOR checks; 156 backend tests green |
 | P12 | Frontend integration | `[ ]` NOT_STARTED |
 | P13 | Testing | `[ ]` NOT_STARTED |
 | P14 | Security hardening | `[ ]` NOT_STARTED |
@@ -384,14 +384,18 @@ that attempt the forbidden write and assert the specific constraint name.
 
 ## P11 — Report generation
 
-- [ ] PDF renderer
-- [ ] All eleven sections (brief §15)
-- [ ] Mandatory disclaimer, unconditional
-- [ ] Model + preprocessing versions printed
-- [ ] Storage + `GET /reports/{id}/download`
-- [ ] Audit events REPORT_GENERATED / REPORT_ACCESSED
-- [ ] Test: missing stages render "Not available", never blank or invented
-- [ ] Test: download authorisation (IDOR)
+**Status: COMPLETE.** Verified with 156 backend tests (`mvn test`) + 29 pytest tests green.
+
+- [x] PDF renderer (`PdfReportRenderer.java` using Apache PDFBox 3.0.4)
+- [x] All eleven sections (brief §15: Facility Header, Demographics, Scan Acquisition, Clinical Indication, AI Classification, AI Segmentation, Longitudinal Dynamics, AI Explanation, Model Provenance, Clinician Attestation, Medical Disclaimer)
+- [x] Mandatory disclaimer, unconditional (prominent bordered clinical warning box on every report)
+- [x] Model + preprocessing versions printed (explicit provenance and preprocessing contract `1.0.0`)
+- [x] Storage + `GET /reports/{id}/download` (streaming with `Content-Disposition` and `application/pdf`)
+- [x] Audit events `REPORT_GENERATED` / `REPORT_ACCESSED`
+- [x] Test: missing stages render "Not available", never blank or invented (`PdfReportRendererTest.java`)
+- [x] Test: download authorisation (caseload IDOR defense) and SHA-256 cryptographic tamper detection (`ReportServiceTest.java`)
+
+**Exit criteria met: YES.**
 
 ---
 

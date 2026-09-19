@@ -124,8 +124,8 @@ The platform is actively developed using test-driven, verifiable delivery phases
 | **P8** | **U-Net Segmentation** | ✅ Complete | BrainTumorUNet, binary mask generation, RLE encoding, `tumorAreaPx` metric |
 | **P9** | **Longitudinal Tracking** | ✅ Complete | Historical scans, LSTM growth dynamics, `INSUFFICIENT_HISTORY` policy |
 | **P10**| **Explanation Layer** | ✅ Complete | 10 Clinical Safety Prohibitions validator, multimodal isolation, fail-closed |
-| **P11**| **PDF Reporting** | 🔄 Next | Downloadable clinical summary reports with provenance |
-| **P12**| **Frontend Integration**| ⏳ Planned | High-fidelity React + TypeScript user interface |
+| **P11**| **PDF Reporting** | ✅ Complete | Apache PDFBox 3 renderer, 11 sections, SHA-256 integrity, IDOR defense |
+| **P12**| **Frontend Integration**| 🔄 Next | High-fidelity React + TypeScript user interface |
 | **P13**| **End-to-End Testing** | ⏳ Planned | Integration suites across all microservices |
 | **P14**| **Security Hardening** | ⏳ Planned | Pen-testing, rate-limiting, audit log freeze |
 | **P15**| **Docker & Deployment** | ⏳ Planned | Production multi-stage containers & Compose |

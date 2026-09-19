@@ -51,6 +51,7 @@
           longer managed by its BOM and the migration is not a version bump.
         -->
         <testcontainers.version>1.21.4</testcontainers.version>
+        <pdfbox.version>3.0.4</pdfbox.version>
     </properties>
 
     <dependencies>
@@ -147,6 +148,13 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- ===================== Reporting (Phase 11) ===================== -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
         </dependency>
 
         <!-- ===================== Test ===================== -->

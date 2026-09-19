@@ -215,7 +215,8 @@ records verified progress against it, so the document stays useful without rewri
 | P8 U-Net segmentation | ✅ COMPLETE | Spring Boot + AI Service verified; **22 pytest** + **126 backend unit tests** |
 | P9 Longitudinal / LSTM | ✅ COMPLETE | Spring Boot + AI Service verified; **29 pytest** + **136 backend unit tests** |
 | P10 Explanation layer | ✅ COMPLETE | Fail-closed validator (10 prohibitions), stub & LLM provider ports, audited; **29 pytest** + **150 backend unit tests** |
-| P11–P16 | ⬜ NOT STARTED | — |
+| P11 PDF Reporting | ✅ COMPLETE | Apache PDFBox 3 renderer (11 sections), SHA-256 cryptographic digest check, IDOR caseload defense; **29 pytest** + **156 backend unit tests** |
+| P12–P16 | ⬜ NOT STARTED | — |
 
 **Privacy & Security Suite (Complete):**
 Dedicated documentation package created in [`docs/privacy-and-security/`](./privacy-and-security/):
